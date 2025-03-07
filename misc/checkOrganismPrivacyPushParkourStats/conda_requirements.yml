@@ -1,4 +1,4 @@
-name: pushParkourStats
+name: checkOrganismPrivacyPushParkourStats
 channels:
   - bioconda
   - conda-forge
