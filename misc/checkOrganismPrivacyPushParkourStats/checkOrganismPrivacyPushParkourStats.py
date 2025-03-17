@@ -485,7 +485,7 @@ def pullParkourSamplesBarcodesOrganisms(
         json_data = pullParkourFlowcellContents.json()
         for _, libs in json_data.items():
             for barcode, lib_props in libs.items():
-                samplesBarcodesLis.append((lib_props[0], barcode))
+                samplesBarcodesLis.append((lib_props[0], barcode, lib_props[3][0]))
         return pd.DataFrame.from_records(
             samplesBarcodesLis, columns=["SampleID", "Barcode", "Organism"]
         )
