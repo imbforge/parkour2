@@ -132,23 +132,24 @@ Ext.define("MainHub.overrides.grid.plugin.Clipboard", {
       destination.setPosition(destination.rowIdx + 1, destinationStartColumn);
     }
 
-    // Sync the store after all records have been updated
-    var store = view.getStore();
-    store.sync({
-      success: function () {
-        new Noty({
-          text: "Data has been pasted and saved successfully.",
-          type: "success"
-        }).show();
-      },
-      failure: function () {
-        new Noty({ text: "Failed to paste the data.", type: "error" }).show();
-      }
-    });
-
-    // BatchAdd: Trigger grid validation after pasting
-    if (this.cmp.id === "batchAddGrid") {
-      this.cmp.fireEvent("validate");
+    // Sync store after pasting only if the element is not the batch-add-grid
+    if (this.cmp.id !== "batch-add-grid") {
+      // Sync the store after all records have been updated
+      var store = view.getStore();
+      store.sync({
+        success: function () {
+          new Noty({
+            text: "The change has been has been automatically saved.",
+            type: "success"
+          }).show();
+        },
+        failure: function () {
+          new Noty({
+            text: "The pasted data could not be automatically saved.",
+            type: "error"
+          }).show();
+        }
+      });
     }
   }
 });
