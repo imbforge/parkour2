@@ -151,5 +151,9 @@ Ext.define("MainHub.overrides.grid.plugin.Clipboard", {
         }
       });
     }
+    // BatchAdd: Trigger grid validation after pasting
+    if (this.cmp.id === "batch-add-grid") {
+      this.cmp.fireEvent("validate");
+    }
   }
 });

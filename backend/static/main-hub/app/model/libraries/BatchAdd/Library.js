@@ -2,12 +2,13 @@ Ext.define("validator.IndexI7", {
   extend: "Ext.data.validator.Validator",
   alias: "data.validator.indexI7",
   validate: function (value, record) {
+    var pattern = new RegExp("^(?=(?:.{6}|.{8}|.{10}|.{12}|.{24})$)[ATCG]+$");
     return (
       record.get("index_reads") === null ||
       record.get("index_reads") === 0 ||
       record.get("index_reads") === 5 ||
-      (record.get("index_reads") > 5 && value !== "") ||
-      "Must be present"
+      (record.get("index_reads") > 5 && pattern.test(value)) ||
+      "Must be present and have the correct format"
     );
   }
 });
@@ -16,14 +17,15 @@ Ext.define("validator.IndexI5", {
   extend: "Ext.data.validator.Validator",
   alias: "data.validator.indexI5",
   validate: function (value, record) {
+    var pattern = new RegExp("^(?=(?:.{6}|.{8}|.{10}|.{12}|.{24})$)[ATCG]+$");
     return (
       record.get("index_reads") === null ||
       record.get("index_reads") === 0 ||
       record.get("index_reads") === 7 ||
       ((record.get("index_reads") % 5 === 0 ||
         record.get("index_reads") % 2 === 0) &&
-        value !== "") ||
-      "Must be present"
+        pattern.test(value)) ||
+      "Must be present and have the correct format"
     );
   }
 });
@@ -71,6 +73,6 @@ Ext.define("MainHub.model.libraries.BatchAdd.Library", {
     index_reads: "presence",
     index_i7: "indexI7",
     index_i5: "indexI5",
-    amplification_cycles: "greaterthanzero",
-  },
+    amplification_cycles: "greaterthanzero"
+  }
 });
