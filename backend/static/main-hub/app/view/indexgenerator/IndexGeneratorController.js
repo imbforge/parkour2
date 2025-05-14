@@ -15,6 +15,7 @@ Ext.define("MainHub.view.indexgenerator.IndexGeneratorController", {
         groupcontextmenu: "showGroupMenu",
         reset: "_resetGeneratedIndices",
         groupexpand: "groupExpand",
+        validate: "validateRecords"
       },
       "#check-column": {
         beforecheckchange: "beforeSelect",
@@ -24,29 +25,29 @@ Ext.define("MainHub.view.indexgenerator.IndexGeneratorController", {
         change: "toggleHandler"
       },
       "#save-pool-button": {
-        click: "save",
+        click: "save"
       },
       "#save-pool-ignore-errors-button": {
-        click: "saveIgnoreErrors",
+        click: "saveIgnoreErrors"
       },
       "#generate-indices-button": {
-        click: "generateIndices",
+        click: "generateIndices"
       },
       "#indexTypePoolingEditor": {
-        select: "selectIndexType",
+        select: "selectIndexType"
       },
       "#indexReadsEditorIndexGenerator": {
-        select: "selectIndexReads",
+        select: "selectIndexReads"
       },
       "#indexI7EditorIndexGenerator": {
         beforequery: "filterIndexStoreChoices",
-        select: "selectMatchingIndexInPair",
+        select: "selectMatchingIndexInPair"
       },
       "#indexI5EditorIndexGenerator": {
         beforequery: "filterIndexStoreChoices",
-        select: "selectMatchingIndexInPair",
-      },
-    },
+        select: "selectMatchingIndexInPair"
+      }
+    }
   },
 
   // Keep a record of the index types loaded in the relevant stores to speed
@@ -98,7 +99,7 @@ Ext.define("MainHub.view.indexgenerator.IndexGeneratorController", {
         if (success) {
           newValue ? gridGrouping.expandAll() : gridGrouping.collapseAll();
         }
-      },
+      }
     });
   },
 
@@ -116,11 +117,11 @@ Ext.define("MainHub.view.indexgenerator.IndexGeneratorController", {
       .getRange();
     var indexTypeIds = Array.from(
       new Set(
-        Ext.pluck(Ext.pluck(records, "data"), "index_type").filter(function (
-          e
-        ) {
-          return e;
-        })
+        Ext.pluck(Ext.pluck(records, "data"), "index_type").filter(
+          function (e) {
+            return e;
+          }
+        )
       )
     );
     var missingIndexTypeIds = indexTypeIds.filter(function (e) {
@@ -147,11 +148,13 @@ Ext.define("MainHub.view.indexgenerator.IndexGeneratorController", {
     // store, an index sequence is not shown when activating a row, even though
     // it is rendered correctly in the unactivated row. Maybe there is a better solution,
     // but for now it works.
-    [Ext.getStore("indexI7Store"), Ext.getStore("indexI5Store")].forEach(function (s) {
-      if(!Ext.isEmpty(s)){
-        s.add(new s.model())
+    [Ext.getStore("indexI7Store"), Ext.getStore("indexI5Store")].forEach(
+      function (s) {
+        if (!Ext.isEmpty(s)) {
+          s.add(new s.model());
+        }
       }
-    })
+    );
   },
 
   toggleEditors: function (editor, context) {
@@ -202,7 +205,7 @@ Ext.define("MainHub.view.indexgenerator.IndexGeneratorController", {
     if (!Ext.getCmp("poolSizeCb").getValue()) {
       new Noty({
         text: "A Sequencing Kit must be set.",
-        type: "warning",
+        type: "warning"
       }).show();
       return false;
     }
@@ -232,14 +235,14 @@ Ext.define("MainHub.view.indexgenerator.IndexGeneratorController", {
       // All index types should have these
       indexReadsStore.add([
         { num: 0, label: "None" },
-        { num: 7, label: "I7 only" },
+        { num: 7, label: "I7 only" }
       ]);
 
       // Only dual indexing
       if (record.get("index_reads") > 1) {
         indexReadsStore.add([
           { num: 5, label: "I5 only" },
-          { num: 75, label: "I7 + I5" },
+          { num: 75, label: "I7 + I5" }
         ]);
       }
 
@@ -383,7 +386,7 @@ Ext.define("MainHub.view.indexgenerator.IndexGeneratorController", {
       { num: 7, label: "I7 only" },
       { num: 5, label: "I5 only" },
       { num: 75, label: "I7 + I5" },
-      { num: 752, label: "I7 + I5 (Pair/UDI)" },
+      { num: 752, label: "I7 + I5 (Pair/UDI)" }
     ]);
   },
 
@@ -498,7 +501,7 @@ Ext.define("MainHub.view.indexgenerator.IndexGeneratorController", {
     if (!Ext.getCmp("poolSizeCb").getValue()) {
       new Noty({
         text: "A Sequencing Kit must be set.",
-        type: "warning",
+        type: "warning"
       }).show();
       return false;
     }
@@ -534,6 +537,39 @@ Ext.define("MainHub.view.indexgenerator.IndexGeneratorController", {
     if (selectedRecord) {
       this._isPoolSizeOk(poolGridStore, selectedRecord);
     }
+  },
+
+  validateRecords: function (records) {
+    var me = this;
+    var grid = Ext.getCmp("index-generator-grid");
+    records = Ext.isEmpty(records) ? grid.getStore().getRange() : records;
+
+    // Validate pasted records
+    grid.isValid = true;
+    records.forEach(function (record) {
+      me.validateRecord(record, grid);
+    });
+
+    // Refresh the grid
+    grid.getView().refresh();
+  },
+
+  validateRecord: function (record, grid) {
+    var validation = record.getValidation(true).data;
+    var invalid = false;
+    var errors = {};
+
+    for (var dataIndex in validation) {
+      if (validation.hasOwnProperty(dataIndex)) {
+        if (validation[dataIndex] !== true) {
+          invalid = true;
+          grid.isValid = false;
+          errors[dataIndex] = validation[dataIndex];
+        }
+      }
+    }
+
+    return errors;
   },
 
   checkRecord: function (checkColumn, rowIndex, checked, record, e, eOpts) {
@@ -592,11 +628,13 @@ Ext.define("MainHub.view.indexgenerator.IndexGeneratorController", {
       minHammingDistanceBox.enable();
       poolName.enable();
       poolName.reset();
-      
+
       var recordTypes = Ext.pluck(
         Ext.Array.pluck(store.data.items, "data"),
         "barcode"
-      ).map(function(b){return b.charAt(2)});
+      ).map(function (b) {
+        return b.charAt(2);
+      });
       var samplesWithBarcodes = store.getRange().some(function (e) {
         return (
           e.get("barcode").charAt(2) === "S" &&
@@ -678,7 +716,7 @@ Ext.define("MainHub.view.indexgenerator.IndexGeneratorController", {
         start_coord: startCoordinate.getValue(),
         direction: direction.getValue(),
         sequencer_chemistry: Ext.JSON.encode(sequencerChemistry),
-        min_hamming_distance: minHammingDistanceBox.getValue(),
+        min_hamming_distance: minHammingDistanceBox.getValue()
       },
       success: function (response) {
         var obj = Ext.JSON.decode(response.responseText);
@@ -763,7 +801,7 @@ Ext.define("MainHub.view.indexgenerator.IndexGeneratorController", {
     if (!poolName.isValid()) {
       new Noty({
         text: "A name for a pool must be set and valid before it can be saved.",
-        type: "error",
+        type: "error"
       }).show();
       return;
     }
@@ -779,7 +817,7 @@ Ext.define("MainHub.view.indexgenerator.IndexGeneratorController", {
       if (!this._isPoolValid(store)) {
         new Noty({
           text: "Some of the indices are empty. The pool cannot be saved.",
-          type: "warning",
+          type: "warning"
         }).show();
         return;
       }
@@ -842,14 +880,14 @@ Ext.define("MainHub.view.indexgenerator.IndexGeneratorController", {
           // If only libraries from one request are present in pool
           // notify user that said pool has been pushed through the
           // Pooling stage directly onto the Load flowcells stage
-          var allLibrariesSameRequest = librariesRequestNames.every(function (
-            e
-          ) {
-            return e === librariesRequestNames[0];
-          });
+          var allLibrariesSameRequest = librariesRequestNames.every(
+            function (e) {
+              return e === librariesRequestNames[0];
+            }
+          );
           if (allLibrariesSameRequest && samples.length === 0) {
             new Noty({
-              text: "The pool has been automatically pushed through to the 'Load Flowcells' stage",
+              text: "The pool has been automatically pushed through to the 'Load Flowcells' stage"
             }).show();
           }
 
@@ -1052,7 +1090,7 @@ Ext.define("MainHub.view.indexgenerator.IndexGeneratorController", {
         if (notif) {
           new Noty({
             text: "Pooling indices of different lengths is not allowed.",
-            type: "warning",
+            type: "warning"
           }).show();
         }
         return false;
@@ -1155,7 +1193,7 @@ Ext.define("MainHub.view.indexgenerator.IndexGeneratorController", {
             " ",
             " ",
             " ",
-            " ",
+            " "
           ];
         } else if (indexI5Sequence.length === 6) {
           indexI5Sequence = indexI5Sequence.concat([
@@ -1164,7 +1202,7 @@ Ext.define("MainHub.view.indexgenerator.IndexGeneratorController", {
             " ",
             " ",
             " ",
-            " ",
+            " "
           ]);
         }
 
@@ -1224,7 +1262,7 @@ Ext.define("MainHub.view.indexgenerator.IndexGeneratorController", {
           index_i5_id: item.get("index_i5_id"),
           index_i7: { index: indexI7 },
           index_i5: { index: indexI5 },
-          coordinate: coordinate,
+          coordinate: coordinate
         };
 
         for (var i = 0; i < 12; i++) {
@@ -1265,7 +1303,7 @@ Ext.define("MainHub.view.indexgenerator.IndexGeneratorController", {
         timeout: 60000,
         scope: this,
         params: {
-          index_type_id: id,
+          index_type_id: id
         },
 
         success: function (response) {
@@ -1303,7 +1341,7 @@ Ext.define("MainHub.view.indexgenerator.IndexGeneratorController", {
           } catch (e) {}
           new Noty({ text: error, type: "error" }).show();
           console.error(response);
-        },
+        }
       });
     });
   },
@@ -1319,7 +1357,7 @@ Ext.define("MainHub.view.indexgenerator.IndexGeneratorController", {
         timeout: 60000,
         scope: this,
         params: {
-          index_type_id: id,
+          index_type_id: id
         },
 
         success: function (response) {
@@ -1347,8 +1385,8 @@ Ext.define("MainHub.view.indexgenerator.IndexGeneratorController", {
           } catch (e) {}
           new Noty({ text: error, type: "error" }).show();
           console.error(response);
-        },
+        }
       });
     });
-  },
+  }
 });

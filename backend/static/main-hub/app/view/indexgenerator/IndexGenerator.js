@@ -38,7 +38,7 @@ Ext.define("MainHub.view.indexgenerator.IndexGenerator", {
               itemId: "as-handler-index-generator-checkbox",
               margin: "0 15 0 0",
               cls: "grid-header-checkbox",
-              checked: false,
+              checked: false
             },
             {
               xtype: "combobox",
@@ -52,9 +52,9 @@ Ext.define("MainHub.view.indexgenerator.IndexGenerator", {
               cls: "panel-header-combobox",
               fieldLabel: '<span data-qtip="Sequencing kit">Seq. Kit</span>',
               labelWidth: 50,
-              width: 285,
-            },
-          ],
+              width: 285
+            }
+          ]
         },
         store: "IndexGenerator",
         enableColumnHide: false,
@@ -66,7 +66,7 @@ Ext.define("MainHub.view.indexgenerator.IndexGenerator", {
             dataIndex: "selected",
             resizable: false,
             tdCls: "no-dirty",
-            width: 36,
+            width: 36
           },
           {
             text: "Name",
@@ -168,7 +168,7 @@ Ext.define("MainHub.view.indexgenerator.IndexGenerator", {
               }
 
               return val;
-            },
+            }
           },
           {
             text: "# of Index Reads",
@@ -185,7 +185,7 @@ Ext.define("MainHub.view.indexgenerator.IndexGenerator", {
               store: Ext.create("Ext.data.Store", {
                 fields: [
                   { name: "num", type: "int" },
-                  { name: "label", type: "string" },
+                  { name: "label", type: "string" }
                 ],
                 // sorters: [{property: 'num', direction: 'DESC'}],
                 data: [
@@ -193,10 +193,10 @@ Ext.define("MainHub.view.indexgenerator.IndexGenerator", {
                   { num: 7, label: "I7 only" },
                   { num: 5, label: "I5 only" },
                   { num: 75, label: "I7 + I5" },
-                  { num: 752, label: "I7 + I5 (Pair/UDI)" },
-                ],
+                  { num: 752, label: "I7 + I5 (Pair/UDI)" }
+                ]
               }),
-              forceSelection: true,
+              forceSelection: true
             },
             renderer: function (value, meta, record) {
               var item = meta.column
@@ -204,7 +204,7 @@ Ext.define("MainHub.view.indexgenerator.IndexGenerator", {
                 .getStore()
                 .findRecord("num", value);
               return item ? item.get("label") : value;
-            },
+            }
           },
           {
             text: "Index I7",
@@ -229,27 +229,9 @@ Ext.define("MainHub.view.indexgenerator.IndexGenerator", {
               ),
               regexText:
                 "Only A, T, C and G (uppercase) are allowed. Index length must be 6, 8, 10, 12 or 24.",
-              matchFieldWidth: false,
+              matchFieldWidth: false
             },
-            renderer: function (value, meta, record) {
-              if (value) {
-                var store = meta.column.getEditor().getStore();
-                store.clearFilter(true);
-                store.filter("index_type", record.get("index_type"), true);
-                var index = store.findRecord(
-                  "index",
-                  value,
-                  0,
-                  false,
-                  true,
-                  true
-                );
-                if (index) {
-                  value = index.get("name");
-                }
-              }
-              return value;
-            },
+            renderer: me.indexRenderer
           },
           {
             text: "Index I5",
@@ -274,28 +256,10 @@ Ext.define("MainHub.view.indexgenerator.IndexGenerator", {
               ),
               regexText:
                 "Only A, T, C and G (uppercase) are allowed. Index length must be 6, 8, 10, 12 or 24.",
-              matchFieldWidth: false,
+              matchFieldWidth: false
             },
-            renderer: function (value, meta, record) {
-              if (value) {
-                var store = meta.column.getEditor().getStore();
-                store.clearFilter(true);
-                store.filter("index_type", record.get("index_type"), true);
-                var index = store.findRecord(
-                  "index",
-                  value,
-                  0,
-                  false,
-                  true,
-                  true
-                );
-                if (index) {
-                  value = index.get("name");
-                }
-              }
-              return value;
-            },
-          },
+            renderer: me.indexRenderer
+          }
         ],
 
         plugins: [
@@ -306,8 +270,11 @@ Ext.define("MainHub.view.indexgenerator.IndexGenerator", {
           },
           {
             ptype: "rowediting",
-            clicksToEdit: 2,
+            clicksToEdit: 2
           },
+          {
+            ptype: "clipboard"
+          }
         ],
 
         dockedItems: [],
@@ -330,7 +297,6 @@ Ext.define("MainHub.view.indexgenerator.IndexGenerator", {
                   return children[0].get("pooled_libraries") ? "Pool, " : "";
                 },
                 getTotalDepth: function (children) {
-
                   var totalDepth = Ext.Array.sum(
                     Ext.Array.pluck(
                       Ext.Array.pluck(children, "data"),
@@ -338,10 +304,10 @@ Ext.define("MainHub.view.indexgenerator.IndexGenerator", {
                     )
                   );
                   // Check whether totalDepth is an integer
-                  // and format accordingly, to avoid float 
+                  // and format accordingly, to avoid float
                   // point rounding ugliness
-                  if (!Number.isInteger(Number(totalDepth.toFixed(2)))){
-                    totalDepth = Ext.util.Format.number(totalDepth, "0.00")
+                  if (!Number.isInteger(Number(totalDepth.toFixed(2)))) {
+                    totalDepth = Ext.util.Format.number(totalDepth, "0.00");
                   }
                   return totalDepth;
                 },
@@ -350,11 +316,11 @@ Ext.define("MainHub.view.indexgenerator.IndexGenerator", {
                 },
                 getPoolSize: function (children) {
                   return children[0].get("pool_size_user_name");
-                },
-              },
-            ],
-          },
-        ],
+                }
+              }
+            ]
+          }
+        ]
       },
       {
         xtype: "grid",
@@ -365,7 +331,7 @@ Ext.define("MainHub.view.indexgenerator.IndexGenerator", {
           sequencerChemistry: 0,
           green: [],
           red: [],
-          black: [],
+          black: []
         },
         header: {
           title: "Pool",
@@ -463,14 +429,12 @@ Ext.define("MainHub.view.indexgenerator.IndexGenerator", {
                   '<span class="summary-green">% green:</span><br>' +
                   '<span class="summary-red">% red:</span><br>' +
                   '<span class="summary-black">% black:</span>';
-              } 
-              else if (sequencerChemistry === 20) {
+              } else if (sequencerChemistry === 20) {
                 labels =
-                '<span class="summary-green">% green:</span><br>' +
-                '<span class="summary-blue">% blue:</span><br>' +
-                '<span class="summary-black">% black:</span>';
-              }
-              else if (sequencerChemistry === 4) {
+                  '<span class="summary-green">% green:</span><br>' +
+                  '<span class="summary-blue">% blue:</span><br>' +
+                  '<span class="summary-black">% black:</span>';
+              } else if (sequencerChemistry === 4) {
                 labels =
                   '<span class="summary-green">% green:</span><br>' +
                   '<span class="summary-red">% red:</span>';
@@ -479,7 +443,7 @@ Ext.define("MainHub.view.indexgenerator.IndexGenerator", {
                 .getStore()
                 .sum("sequencing_depth");
               return totalSequencingDepth > 0 ? labels : "";
-            },
+            }
           },
           {
             text: "1",
@@ -488,7 +452,7 @@ Ext.define("MainHub.view.indexgenerator.IndexGenerator", {
             renderer: me.renderNucleotide,
             summaryType: me.calculateColorDiversity,
             summaryRenderer: me.renderSummary,
-            width: 36,
+            width: 36
           },
           {
             text: "2",
@@ -497,7 +461,7 @@ Ext.define("MainHub.view.indexgenerator.IndexGenerator", {
             renderer: me.renderNucleotide,
             summaryType: me.calculateColorDiversity,
             summaryRenderer: me.renderSummary,
-            width: 36,
+            width: 36
           },
           {
             text: "3",
@@ -506,7 +470,7 @@ Ext.define("MainHub.view.indexgenerator.IndexGenerator", {
             renderer: me.renderNucleotide,
             summaryType: me.calculateColorDiversity,
             summaryRenderer: me.renderSummary,
-            width: 36,
+            width: 36
           },
           {
             text: "4",
@@ -515,7 +479,7 @@ Ext.define("MainHub.view.indexgenerator.IndexGenerator", {
             renderer: me.renderNucleotide,
             summaryType: me.calculateColorDiversity,
             summaryRenderer: me.renderSummary,
-            width: 36,
+            width: 36
           },
           {
             text: "5",
@@ -524,7 +488,7 @@ Ext.define("MainHub.view.indexgenerator.IndexGenerator", {
             renderer: me.renderNucleotide,
             summaryType: me.calculateColorDiversity,
             summaryRenderer: me.renderSummary,
-            width: 36,
+            width: 36
           },
           {
             text: "6",
@@ -533,7 +497,7 @@ Ext.define("MainHub.view.indexgenerator.IndexGenerator", {
             renderer: me.renderNucleotide,
             summaryType: me.calculateColorDiversity,
             summaryRenderer: me.renderSummary,
-            width: 36,
+            width: 36
           },
           {
             text: "7",
@@ -542,7 +506,7 @@ Ext.define("MainHub.view.indexgenerator.IndexGenerator", {
             renderer: me.renderNucleotide,
             summaryType: me.calculateColorDiversity,
             summaryRenderer: me.renderSummary,
-            width: 36,
+            width: 36
           },
           {
             text: "8",
@@ -551,7 +515,7 @@ Ext.define("MainHub.view.indexgenerator.IndexGenerator", {
             renderer: me.renderNucleotide,
             summaryType: me.calculateColorDiversity,
             summaryRenderer: me.renderSummary,
-            width: 36,
+            width: 36
           },
           {
             text: "9",
@@ -560,7 +524,7 @@ Ext.define("MainHub.view.indexgenerator.IndexGenerator", {
             renderer: me.renderNucleotide,
             summaryType: me.calculateColorDiversity,
             summaryRenderer: me.renderSummary,
-            width: 36,
+            width: 36
           },
           {
             text: "10",
@@ -569,7 +533,7 @@ Ext.define("MainHub.view.indexgenerator.IndexGenerator", {
             renderer: me.renderNucleotide,
             summaryType: me.calculateColorDiversity,
             summaryRenderer: me.renderSummary,
-            width: 36,
+            width: 36
           },
           {
             text: "11",
@@ -578,7 +542,7 @@ Ext.define("MainHub.view.indexgenerator.IndexGenerator", {
             renderer: me.renderNucleotide,
             summaryType: me.calculateColorDiversity,
             summaryRenderer: me.renderSummary,
-            width: 36,
+            width: 36
           },
           {
             text: "12",
@@ -587,7 +551,7 @@ Ext.define("MainHub.view.indexgenerator.IndexGenerator", {
             renderer: me.renderNucleotide,
             summaryType: me.calculateColorDiversity,
             summaryRenderer: me.renderSummary,
-            width: 36,
+            width: 36
           },
           {
             text: "Index I5 ID",
@@ -602,14 +566,12 @@ Ext.define("MainHub.view.indexgenerator.IndexGenerator", {
                   '<span class="summary-green">% green:</span><br>' +
                   '<span class="summary-red">% red:</span><br>' +
                   '<span class="summary-black">% black:</span>';
-              }   
-              else if (sequencerChemistry === 20) {
+              } else if (sequencerChemistry === 20) {
                 labels =
-                '<span class="summary-green">% green:</span><br>' +
-                '<span class="summary-blue">% blue:</span><br>' +
-                '<span class="summary-black">% black:</span>';
-              }
-              else if (sequencerChemistry === 4) {
+                  '<span class="summary-green">% green:</span><br>' +
+                  '<span class="summary-blue">% blue:</span><br>' +
+                  '<span class="summary-black">% black:</span>';
+              } else if (sequencerChemistry === 4) {
                 labels =
                   '<span class="summary-green">% green:</span><br>' +
                   '<span class="summary-red">% red:</span>';
@@ -628,7 +590,7 @@ Ext.define("MainHub.view.indexgenerator.IndexGenerator", {
             renderer: me.renderNucleotide,
             summaryType: me.calculateColorDiversity,
             summaryRenderer: me.renderSummary,
-            width: 36,
+            width: 36
           },
           {
             text: "2",
@@ -637,7 +599,7 @@ Ext.define("MainHub.view.indexgenerator.IndexGenerator", {
             renderer: me.renderNucleotide,
             summaryType: me.calculateColorDiversity,
             summaryRenderer: me.renderSummary,
-            width: 36,
+            width: 36
           },
           {
             text: "3",
@@ -646,7 +608,7 @@ Ext.define("MainHub.view.indexgenerator.IndexGenerator", {
             renderer: me.renderNucleotide,
             summaryType: me.calculateColorDiversity,
             summaryRenderer: me.renderSummary,
-            width: 36,
+            width: 36
           },
           {
             text: "4",
@@ -655,7 +617,7 @@ Ext.define("MainHub.view.indexgenerator.IndexGenerator", {
             renderer: me.renderNucleotide,
             summaryType: me.calculateColorDiversity,
             summaryRenderer: me.renderSummary,
-            width: 36,
+            width: 36
           },
           {
             text: "5",
@@ -664,7 +626,7 @@ Ext.define("MainHub.view.indexgenerator.IndexGenerator", {
             renderer: me.renderNucleotide,
             summaryType: me.calculateColorDiversity,
             summaryRenderer: me.renderSummary,
-            width: 36,
+            width: 36
           },
           {
             text: "6",
@@ -673,7 +635,7 @@ Ext.define("MainHub.view.indexgenerator.IndexGenerator", {
             renderer: me.renderNucleotide,
             summaryType: me.calculateColorDiversity,
             summaryRenderer: me.renderSummary,
-            width: 36,
+            width: 36
           },
           {
             text: "7",
@@ -682,7 +644,7 @@ Ext.define("MainHub.view.indexgenerator.IndexGenerator", {
             renderer: me.renderNucleotide,
             summaryType: me.calculateColorDiversity,
             summaryRenderer: me.renderSummary,
-            width: 36,
+            width: 36
           },
           {
             text: "8",
@@ -691,7 +653,7 @@ Ext.define("MainHub.view.indexgenerator.IndexGenerator", {
             renderer: me.renderNucleotide,
             summaryType: me.calculateColorDiversity,
             summaryRenderer: me.renderSummary,
-            width: 36,
+            width: 36
           },
           {
             text: "9",
@@ -700,7 +662,7 @@ Ext.define("MainHub.view.indexgenerator.IndexGenerator", {
             renderer: me.renderNucleotide,
             summaryType: me.calculateColorDiversity,
             summaryRenderer: me.renderSummary,
-            width: 36,
+            width: 36
           },
           {
             text: "10",
@@ -709,7 +671,7 @@ Ext.define("MainHub.view.indexgenerator.IndexGenerator", {
             renderer: me.renderNucleotide,
             summaryType: me.calculateColorDiversity,
             summaryRenderer: me.renderSummary,
-            width: 36,
+            width: 36
           },
           {
             text: "11",
@@ -718,7 +680,7 @@ Ext.define("MainHub.view.indexgenerator.IndexGenerator", {
             renderer: me.renderNucleotide,
             summaryType: me.calculateColorDiversity,
             summaryRenderer: me.renderSummary,
-            width: 36,
+            width: 36
           },
           {
             text: "12",
@@ -727,8 +689,8 @@ Ext.define("MainHub.view.indexgenerator.IndexGenerator", {
             renderer: me.renderNucleotide,
             summaryType: me.calculateColorDiversity,
             summaryRenderer: me.renderSummary,
-            width: 36,
-          },
+            width: 36
+          }
         ],
         store: [],
         dockedItems: [
@@ -745,24 +707,24 @@ Ext.define("MainHub.view.indexgenerator.IndexGenerator", {
                     {
                       sequencerChemistry: 0,
                       name: "N/A",
-                      tooltip: "None",
+                      tooltip: "None"
                     },
                     {
                       sequencerChemistry: 2,
                       name: "2-ch",
-                      tooltip: "Illumina 2-channel SBS technology",
+                      tooltip: "Illumina 2-channel SBS technology"
                     },
                     {
                       sequencerChemistry: 20,
                       name: "2-ch XLEAP",
-                      tooltip: "Illumina 2-channel XLEAP SBS technology",
+                      tooltip: "Illumina 2-channel XLEAP SBS technology"
                     },
                     {
                       sequencerChemistry: 4,
                       name: "4-ch",
-                      tooltip: "Illumina 4-channel SBS technology",
-                    },
-                  ],
+                      tooltip: "Illumina 4-channel SBS technology"
+                    }
+                  ]
                 }),
                 queryMode: "local",
                 displayField: "name",
@@ -783,17 +745,17 @@ Ext.define("MainHub.view.indexgenerator.IndexGenerator", {
                     // Trigger datachange event on poolGrid store,
                     // because the summary row is not updated by
                     // simply refreshing the view
-                    poolGrid.store.fireEvent('datachanged');
-                  },
+                    poolGrid.store.fireEvent("datachanged");
+                  }
                 },
                 listConfig: {
                   getInnerTpl: function () {
                     return '<span data-qtip="{tooltip}">{name}</span>';
-                  },
-                },
+                  }
+                }
               },
               {
-                xtype: "tbseparator",
+                xtype: "tbseparator"
               },
               {
                 xtype: "numberfield",
@@ -812,8 +774,8 @@ Ext.define("MainHub.view.indexgenerator.IndexGenerator", {
                     var grid = Ext.getCmp("index-generator-grid");
                     grid.fireEvent("reset");
                     Ext.getCmp("pool-grid").getView().refresh();
-                  },
-                },
+                  }
+                }
               },
               "->",
               {
@@ -822,8 +784,8 @@ Ext.define("MainHub.view.indexgenerator.IndexGenerator", {
                 itemId: "generate-indices-button",
                 iconCls: "fa fa-cogs fa-lg",
                 text: "Generate Indices",
-                disabled: true,
-              },
+                disabled: true
+              }
 
               /* for future:
                 {
@@ -833,7 +795,7 @@ Ext.define("MainHub.view.indexgenerator.IndexGenerator", {
                   iconCls: 'fa fa-file-excel-o fa-lg'
                 },
                 */
-            ],
+            ]
           },
           {
             xtype: "toolbar",
@@ -853,7 +815,7 @@ Ext.define("MainHub.view.indexgenerator.IndexGenerator", {
                 regex: /^[A-Za-z0-9_]+$/,
                 regexText: "Only A-Z a-z 0-9 and _ are allowed",
                 msgTarget: "side",
-                disabled: true,
+                disabled: true
               },
               "->",
               {
@@ -862,7 +824,7 @@ Ext.define("MainHub.view.indexgenerator.IndexGenerator", {
                 itemId: "save-pool-button",
                 iconCls: "fa fa-floppy-o fa-lg",
                 text: "Save Pool",
-                disabled: true,
+                disabled: true
               },
               {
                 xtype: "button",
@@ -870,15 +832,33 @@ Ext.define("MainHub.view.indexgenerator.IndexGenerator", {
                 itemId: "save-pool-ignore-errors-button",
                 iconCls: "fa fa-floppy-o fa-lg",
                 text: "Ignore error(s) and Save Pool",
-                disabled: true,
-              },
-            ],
-          },
-        ],
-      },
+                disabled: true
+              }
+            ]
+          }
+        ]
+      }
     ];
 
     me.callParent(arguments);
+  },
+
+  indexRenderer: function (value, meta, record) {
+    if (value) {
+      var store = meta.column.getEditor().getStore();
+      store.clearFilter(true);
+      store.filter("index_type", record.get("index_type"), true);
+      var index = store.findRecord("index", value, 0, false, true, true);
+      if (index) {
+        value = index.get("name");
+      }
+    }
+
+    if (!record.isValid()) {
+      meta.tdCls += " invalid-record";
+    }
+
+    return value;
   },
 
   getBaseColours: function (sequencerChemistry) {
@@ -889,13 +869,13 @@ Ext.define("MainHub.view.indexgenerator.IndexGenerator", {
         sequencerChemistry: 0,
         green: [],
         red: [],
-        black: [],
+        black: []
       },
       {
         sequencerChemistry: 2,
         green: ["A", "T"],
         red: ["A", "C"],
-        black: ["G"],
+        black: ["G"]
       },
       {
         sequencerChemistry: 20,
@@ -903,14 +883,14 @@ Ext.define("MainHub.view.indexgenerator.IndexGenerator", {
         // For XLEAP, red is actually blue, but it's
         // easier to keep using red "in the background"
         red: ["A", "C"],
-        black: ["G"],
+        black: ["G"]
       },
       {
         sequencerChemistry: 4,
         green: ["G", "T"],
         red: ["A", "C"],
-        black: [],
-      },
+        black: []
+      }
     ];
 
     return baseColoursBySequencerChemistry.find(function (o) {
@@ -923,17 +903,19 @@ Ext.define("MainHub.view.indexgenerator.IndexGenerator", {
     meta.tdCls = "nucleotide";
 
     if (baseColours.green.includes(val) & baseColours.red.includes(val)) {
-      meta.tdStyle += baseColours.sequencerChemistry === 20 ? // For XLEAP, it should be teal
-                      "background-color:#b2d8d8;" : 
-                      "background-color:#fffacd;";
+      meta.tdStyle +=
+        baseColours.sequencerChemistry === 20 // For XLEAP, it should be teal
+          ? "background-color:#b2d8d8;"
+          : "background-color:#fffacd;";
       return val;
     } else if (baseColours.green.includes(val)) {
       meta.tdStyle += "background-color:#dcedc8;";
       return val;
     } else if (baseColours.red.includes(val)) {
-      meta.tdStyle += baseColours.sequencerChemistry === 20 ? // For XLEAP, it should be blue
-                      "background-color:#bfe6ff;" :
-                      "background-color:#ef9a9a;";
+      meta.tdStyle +=
+        baseColours.sequencerChemistry === 20 // For XLEAP, it should be blue
+          ? "background-color:#bfe6ff;"
+          : "background-color:#ef9a9a;";
       return val;
     }
 

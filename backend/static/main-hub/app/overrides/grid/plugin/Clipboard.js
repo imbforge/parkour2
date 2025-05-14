@@ -15,7 +15,8 @@ Ext.define("MainHub.overrides.grid.plugin.Clipboard", {
       destination = navModel.getPosition(),
       dataIndex,
       destinationStartColumn,
-      dataObject = {};
+      dataObject = {},
+      changedRecords = [];
 
     // If the view is not focused, use the first cell of the selection as the destination.
     if (!destination) {
@@ -121,6 +122,7 @@ Ext.define("MainHub.overrides.grid.plugin.Clipboard", {
 
       // Update the record in one go.
       destination.record.set(dataObject);
+      changedRecords.push(destination.record);
       dataObject = {};
 
       // If we are at the end of the destination store, break the row loop.
@@ -130,6 +132,20 @@ Ext.define("MainHub.overrides.grid.plugin.Clipboard", {
 
       // Jump to next row in destination
       destination.setPosition(destination.rowIdx + 1, destinationStartColumn);
+    }
+
+    // For index-generator-grid, sync pasted data only if valid
+    if (this.cmp.id === "index-generator-grid") {
+      // this.cmp.fireEvent("validate", changedRecords);
+      if (!this.cmp.isValid) {
+        new Noty({
+          text:
+            "The data you are trying to paste are invalid and have " +
+            "not been automatically saved.",
+          type: "error"
+        }).show();
+        return;
+      }
     }
 
     // Sync store after pasting only if the element is not the batch-add-grid
@@ -151,6 +167,7 @@ Ext.define("MainHub.overrides.grid.plugin.Clipboard", {
         }
       });
     }
+
     // BatchAdd: Trigger grid validation after pasting
     if (this.cmp.id === "batch-add-grid") {
       this.cmp.fireEvent("validate");

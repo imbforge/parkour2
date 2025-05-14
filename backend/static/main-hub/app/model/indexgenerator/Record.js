@@ -1,3 +1,17 @@
+Ext.define("validator.IndexIndexGenerator", {
+  extend: "Ext.data.validator.Validator",
+  alias: "data.validator.IndexIndexGenerator",
+  validate: function (value, record) {
+    var pattern = new RegExp("^(?=(?:.{6}|.{8}|.{10}|.{12}|.{24})$)[ATCG]+$");
+    return (
+      value === null ||
+      value === "" ||
+      pattern.test(value) ||
+      "If present, must have the correct format"
+    );
+  }
+});
+
 Ext.define("MainHub.model.indexgenerator.Record", {
   extend: "MainHub.model.Base",
 
@@ -56,11 +70,16 @@ Ext.define("MainHub.model.indexgenerator.Record", {
     },
     {
       name: "index_reads",
-      type: "int",
+      type: "int"
     },
     {
       name: "read_length",
       type: "int"
     }
-  ]
+  ],
+
+  validators: {
+    index_i7: "IndexIndexGenerator",
+    index_i5: "IndexIndexGenerator"
+  }
 });

@@ -1,6 +1,6 @@
-Ext.define("validator.IndexI7", {
+Ext.define("validator.IndexI7Batch", {
   extend: "Ext.data.validator.Validator",
-  alias: "data.validator.indexI7",
+  alias: "data.validator.indexI7batch",
   validate: function (value, record) {
     var pattern = new RegExp("^(?=(?:.{6}|.{8}|.{10}|.{12}|.{24})$)[ATCG]+$");
     return (
@@ -13,9 +13,9 @@ Ext.define("validator.IndexI7", {
   }
 });
 
-Ext.define("validator.IndexI5", {
+Ext.define("validator.IndexI5Batch", {
   extend: "Ext.data.validator.Validator",
-  alias: "data.validator.indexI5",
+  alias: "data.validator.indexI5batch",
   validate: function (value, record) {
     var pattern = new RegExp("^(?=(?:.{6}|.{8}|.{10}|.{12}|.{24})$)[ATCG]+$");
     return (
@@ -71,8 +71,8 @@ Ext.define("MainHub.model.libraries.BatchAdd.Library", {
     mean_fragment_size: "greaterthanzero",
     index_type: "presence",
     index_reads: "presence",
-    index_i7: "indexI7",
-    index_i5: "indexI5",
+    index_i7: "IndexI7Batch",
+    index_i5: "IndexI5Batch",
     amplification_cycles: "greaterthanzero"
   }
 });
