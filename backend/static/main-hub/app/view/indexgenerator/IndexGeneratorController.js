@@ -363,6 +363,7 @@ Ext.define("MainHub.view.indexgenerator.IndexGeneratorController", {
 
   editRecord: function (editor, context) {
     var record = context.record;
+    record.set({ invalid: false, errors: {} });
 
     // Reset Index I7 and Index I5, as relevant
     if (record.get("index_reads") === 7) {
@@ -373,8 +374,24 @@ Ext.define("MainHub.view.indexgenerator.IndexGeneratorController", {
       record.set({ index_i7: "", index_i5: "" });
     }
 
-    var store = editor.grid.getStore();
-    this.syncStore(store.getId(), true); // true to reload the store after the record has been edited
+    var store = context.grid.getStore();
+
+    // Check if there are invalid records
+    store.clearFilter(true);
+    store.filter("invalid", true, true);
+    var numInvalidRecords = store.getCount();
+    store.clearFilter(true);
+
+    if (numInvalidRecords === 0) {
+      this.syncStore(store.getId(), true); // true to reload the store after the record has been edited
+    } else {
+      new Noty({
+        text:
+          "The row was edited but the table was not saved " +
+          "because it contains invalid value(s).",
+        type: "warning"
+      }).show();
+    }
 
     // Reset indexReadsStore, before refreshing view
     var indexReadsStore = Ext.getCmp(
@@ -542,10 +559,10 @@ Ext.define("MainHub.view.indexgenerator.IndexGeneratorController", {
   validateRecords: function (records) {
     var me = this;
     var grid = Ext.getCmp("index-generator-grid");
-    records = Ext.isEmpty(records) ? grid.getStore().getRange() : records;
+    var store = grid.getStore();
+    store.clearFilter(true);
+    records = Ext.isEmpty(records) ? store.getRange() : records;
 
-    // Validate pasted records
-    grid.isValid = true;
     records.forEach(function (record) {
       me.validateRecord(record, grid);
     });
@@ -555,19 +572,23 @@ Ext.define("MainHub.view.indexgenerator.IndexGeneratorController", {
   },
 
   validateRecord: function (record, grid) {
-    var validation = record.getValidation(true).data;
+    var store = grid.getStore();
     var invalid = false;
     var errors = {};
 
+    var validation = record.getValidation(true).data;
     for (var dataIndex in validation) {
       if (validation.hasOwnProperty(dataIndex)) {
         if (validation[dataIndex] !== true) {
           invalid = true;
-          grid.isValid = false;
           errors[dataIndex] = validation[dataIndex];
         }
       }
     }
+
+    store.suspendEvents();
+    record.set({ invalid: invalid, errors: errors });
+    store.resumeEvents();
 
     return errors;
   },

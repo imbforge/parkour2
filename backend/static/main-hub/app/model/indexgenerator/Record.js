@@ -75,6 +75,16 @@ Ext.define("MainHub.model.indexgenerator.Record", {
     {
       name: "read_length",
       type: "int"
+    },
+    {
+      type: "bool",
+      name: "invalid",
+      defaultValue: false
+    },
+    {
+      type: "auto",
+      name: "errors",
+      defaultValue: {}
     }
   ],
 

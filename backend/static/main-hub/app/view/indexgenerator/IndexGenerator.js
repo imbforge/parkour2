@@ -854,8 +854,13 @@ Ext.define("MainHub.view.indexgenerator.IndexGenerator", {
       }
     }
 
-    if (!record.isValid()) {
-      meta.tdCls += " invalid-record";
+    if (record.get("invalid")) {
+      var dataIndex = meta.column.dataIndex;
+      var errors = record.get("errors");
+      if (Object.keys(errors).indexOf(dataIndex) !== -1) {
+        meta.tdCls += " invalid-record";
+        meta.tdAttr = 'data-qtip="' + errors[dataIndex] + '"';
+      }
     }
 
     return value;

@@ -136,12 +136,18 @@ Ext.define("MainHub.overrides.grid.plugin.Clipboard", {
 
     // For index-generator-grid, sync pasted data only if valid
     if (this.cmp.id === "index-generator-grid") {
-      // this.cmp.fireEvent("validate", changedRecords);
-      if (!this.cmp.isValid) {
+      this.cmp.fireEvent("validate", changedRecords);
+      var store = this.cmp.getStore();
+      // Check if there are invalid records
+      store.clearFilter(true);
+      store.filter("invalid", true, true);
+      var numInvalidRecords = store.getCount();
+      store.clearFilter(true);
+      if (numInvalidRecords > 0) {
         new Noty({
           text:
-            "The data you are trying to paste are invalid and have " +
-            "not been automatically saved.",
+            "The value(s) you are trying to paste are invalid " +
+            "and have not been automatically saved.",
           type: "error"
         }).show();
         return;
@@ -155,7 +161,7 @@ Ext.define("MainHub.overrides.grid.plugin.Clipboard", {
       store.sync({
         success: function () {
           new Noty({
-            text: "The change has been has been automatically saved.",
+            text: "The change has been automatically saved.",
             type: "success"
           }).show();
         },
