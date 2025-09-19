@@ -1,10 +1,8 @@
 import json
 import logging
 
-from common.mixins import MultiEditMixin
-from common.views import CsrfExemptSessionAuthentication
 from django.apps import apps
-from django.db.models import Q, Count
+from django.db.models import Count, Q
 from django.http import HttpResponse
 from rest_framework import viewsets
 from rest_framework.decorators import action
@@ -13,6 +11,9 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAdminUser
 from rest_framework.response import Response
 from xlwt import Formula, Workbook, XFStyle
+
+from common.mixins import MultiEditMixin
+from common.views import CsrfExemptSessionAuthentication
 
 from .models import LibraryPreparation
 from .serializers import LibraryPreparationSerializer
@@ -48,11 +49,11 @@ class LibraryPreparationViewSet(MultiEditMixin, viewsets.ReadOnlyModelViewSet):
             .filter(
                 # Only show if exactly one pool is associated with a sample
                 # The assumption (right?) that any sample that is assigned
-                # to more than one pool and has a status of 2 represents a 
-                # re-pooling event 
+                # to more than one pool and has a status of 2 represents a
+                # re-pooling event
                 Q(sample__status=2) | Q(sample__status=-2),
                 archived=False,
-                pool_count=1
+                pool_count=1,
             )
         )
 
@@ -76,7 +77,7 @@ class LibraryPreparationViewSet(MultiEditMixin, viewsets.ReadOnlyModelViewSet):
         pools_map = {}
         for key, val in pools:
             pools_map.setdefault(val, []).append(key)
-        pools_map = {k: ', '.join(v) for k, v in pools_map.items()}
+        pools_map = {k: ", ".join(v) for k, v in pools_map.items()}
 
         # Get coordinates
         index_types = {x.sample.index_type.pk for x in queryset if x.sample.index_type}
@@ -172,7 +173,7 @@ class LibraryPreparationViewSet(MultiEditMixin, viewsets.ReadOnlyModelViewSet):
                 .first()
             )
 
-            request_ids.add(int(item["request_name"].split("_")[0]))
+            request_ids.add(item["request_name"])
 
             row = [
                 item["request_name"],
@@ -206,7 +207,9 @@ class LibraryPreparationViewSet(MultiEditMixin, viewsets.ReadOnlyModelViewSet):
             for i in range(len(row)):
                 ws.write(row_num, i, row[i], font_style)
 
-        request_ids_string = "_".join(str(id) for id in request_ids)
+        request_ids_string = "_".join(
+            Request.objects.filter(name__in=request_ids).values_list("id", flat=True)
+        )
         filename = f"{request_ids_string}_Library_Preparation_Benchtop_Protocol.xls"
         response["Content-Disposition"] = f'attachment; filename="{filename}"'
         wb.save(response)
