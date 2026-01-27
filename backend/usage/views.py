@@ -3,20 +3,20 @@ from collections import Counter
 from django.apps import apps
 from django.db.models import Prefetch
 from django.utils import timezone
-from rest_framework.permissions import IsAdminUser, BasePermission
+from rest_framework.permissions import BasePermission, IsAdminUser
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from report.views import report, database_data
+
+from report.views import database_data, report
 
 Request = apps.get_model("request", "Request")
 LibraryType = apps.get_model("library_sample_shared", "LibraryType")
 Library = apps.get_model("library", "Library")
 Sample = apps.get_model("sample", "Sample")
 
+
 class IsMemberBcf(BasePermission):
-
     def has_permission(self, request, view):
-
         return request.user.member_of_bcf
 
 
@@ -48,11 +48,12 @@ def get_date_range(request, format):
 
 
 class RecordsUsage(APIView):
-    permission_classes = [IsAdminUser|IsMemberBcf]
+    permission_classes = [IsAdminUser | IsMemberBcf]
 
     def get(self, request):
         start, end = get_date_range(request, "%Y-%m-%dT%H:%M:%S")
-        status = request.query_params.get('status', 'submitted')
+        status = request.query_params.get("status", "submitted")
+        organization_id = request.query_params.get("organization", None)
 
         libraries = Library.objects.filter(
             request__isnull=False,
@@ -66,9 +67,17 @@ class RecordsUsage(APIView):
             request__samples_submitted_time__lte=end,
         ).only("id")
 
-        if status == 'sequenced':
+        if status == "sequenced":
             samples = samples.filter(request__sequenced=True)
             libraries = libraries.filter(request__sequenced=True)
+
+        if organization_id:
+            samples = samples.filter(
+                request__cost_unit__organization__id=organization_id
+            )
+            libraries = libraries.filter(
+                request__cost_unit__organization__id=organization_id
+            )
 
         return Response(
             [
@@ -85,11 +94,12 @@ class RecordsUsage(APIView):
 
 
 class OrganizationsUsage(APIView):
-    permission_classes = [IsAdminUser|IsMemberBcf]
+    permission_classes = [IsAdminUser | IsMemberBcf]
 
     def get(self, request):
         start, end = get_date_range(request, "%Y-%m-%dT%H:%M:%S")
-        status = request.query_params.get('status', 'submitted')
+        status = request.query_params.get("status", "submitted")
+        organization_id = request.query_params.get("organization", None)
 
         libraries_qs = Library.objects.filter(
             request__isnull=False,
@@ -102,9 +112,17 @@ class OrganizationsUsage(APIView):
             request__samples_submitted_time__lte=end,
         ).only("id")
 
-        if status == 'sequenced':
+        if status == "sequenced":
             samples_qs = samples_qs.filter(request__sequenced=True)
             libraries_qs = libraries_qs.filter(request__sequenced=True)
+
+        if organization_id:
+            samples_qs = samples_qs.filter(
+                request__cost_unit__organization__id=organization_id
+            )
+            libraries_qs = libraries_qs.filter(
+                request__cost_unit__organization__id=organization_id
+            )
 
         requests = (
             Request.objects.select_related(
@@ -117,12 +135,15 @@ class OrganizationsUsage(APIView):
                 ),
                 Prefetch("samples", queryset=samples_qs, to_attr="fetched_samples"),
             )
-            .filter(samples_submitted_time__gte=start,samples_submitted_time__lte=end)
+            .filter(samples_submitted_time__gte=start, samples_submitted_time__lte=end)
             .only("id", "cost_unit__organization__name", "libraries", "samples")
         )
 
-        if status == 'sequenced':
+        if status == "sequenced":
             requests = requests.filter(sequenced=True)
+
+        if organization_id:
+            requests = requests.filter(cost_unit__organization__id=organization_id)
 
         counts = {}
         for req in requests:
@@ -142,11 +163,12 @@ class OrganizationsUsage(APIView):
 
 
 class PrincipalInvestigatorsUsage(APIView):
-    permission_classes = [IsAdminUser|IsMemberBcf]
+    permission_classes = [IsAdminUser | IsMemberBcf]
 
     def get(self, request):
         start, end = get_date_range(request, "%Y-%m-%dT%H:%M:%S")
-        status = request.query_params.get('status', 'submitted')
+        status = request.query_params.get("status", "submitted")
+        organization_id = request.query_params.get("organization", None)
 
         libraries_qs = Library.objects.filter(
             request__isnull=False,
@@ -159,9 +181,17 @@ class PrincipalInvestigatorsUsage(APIView):
             request__samples_submitted_time__lte=end,
         ).only("id")
 
-        if status == 'sequenced':
+        if status == "sequenced":
             samples_qs = samples_qs.filter(request__sequenced=True)
             libraries_qs = libraries_qs.filter(request__sequenced=True)
+
+        if organization_id:
+            samples_qs = samples_qs.filter(
+                request__cost_unit__organization__id=organization_id
+            )
+            libraries_qs = libraries_qs.filter(
+                request__cost_unit__organization__id=organization_id
+            )
 
         requests = (
             Request.objects.filter(archived=False)
@@ -175,8 +205,11 @@ class PrincipalInvestigatorsUsage(APIView):
             .only("id", "libraries", "samples")
         )
 
-        if status == 'sequenced':
+        if status == "sequenced":
             requests = requests.filter(sequenced=True)
+
+        if organization_id:
+            requests = requests.filter(cost_unit__organization__id=organization_id)
 
         counts = {}
         for req in requests:
@@ -202,27 +235,43 @@ class PrincipalInvestigatorsUsage(APIView):
 
 
 class LibraryTypesUsage(APIView):
-    permission_classes = [IsAdminUser|IsMemberBcf]
+    permission_classes = [IsAdminUser | IsMemberBcf]
 
     def get(self, request):
         start, end = get_date_range(request, "%Y-%m-%dT%H:%M:%S")
-        status = request.query_params.get('status', 'submitted')
+        status = request.query_params.get("status", "submitted")
+        organization_id = request.query_params.get("organization", None)
 
-        libraries_qs = Library.objects. \
-        select_related("library_type"). \
-        filter(request__isnull=False,
-               request__samples_submitted_time__gte=start,
-               request__samples_submitted_time__lte=end,
-        ).only("id", "library_type__name")
-        samples_qs = Sample.objects.select_related("library_type"). \
-        filter(request__isnull=False,
-               request__samples_submitted_time__gte=start,
-               request__samples_submitted_time__lte=end,
-        ).only("id", "library_type__name")
+        libraries_qs = (
+            Library.objects.select_related("library_type")
+            .filter(
+                request__isnull=False,
+                request__samples_submitted_time__gte=start,
+                request__samples_submitted_time__lte=end,
+            )
+            .only("id", "library_type__name")
+        )
+        samples_qs = (
+            Sample.objects.select_related("library_type")
+            .filter(
+                request__isnull=False,
+                request__samples_submitted_time__gte=start,
+                request__samples_submitted_time__lte=end,
+            )
+            .only("id", "library_type__name")
+        )
 
-        if status == 'sequenced':
+        if status == "sequenced":
             samples_qs = samples_qs.filter(request__sequenced=True)
             libraries_qs = libraries_qs.filter(request__sequenced=True)
+
+        if organization_id:
+            samples_qs = samples_qs.filter(
+                request__cost_unit__organization__id=organization_id
+            )
+            libraries_qs = libraries_qs.filter(
+                request__cost_unit__organization__id=organization_id
+            )
 
         requests = (
             Request.objects.filter(archived=False)
@@ -236,8 +285,11 @@ class LibraryTypesUsage(APIView):
             .only("id", "libraries", "samples")
         )
 
-        if status == 'sequenced':
+        if status == "sequenced":
             requests = requests.filter(sequenced=True)
+
+        if organization_id:
+            requests = requests.filter(cost_unit__organization__id=organization_id)
 
         counts = {}
         for req in requests:
@@ -279,23 +331,21 @@ class LibraryTypesUsage(APIView):
         data = sorted(data, key=lambda x: x["name"])
         return Response(data)
 
-class UsageReport(APIView):
 
-    permission_classes = [IsAdminUser|IsMemberBcf]
+class UsageReport(APIView):
+    permission_classes = [IsAdminUser | IsMemberBcf]
 
     def get(self, request):
-
         request.GET = request.GET.copy()
-        request.GET['download'] = 'true'
-        request.GET['status'] = request.query_params.get('status', 'submitted')
+        request.GET["download"] = "true"
+        request.GET["status"] = request.query_params.get("status", "submitted")
+        request.GET["organization"] = request.query_params.get("organization", None)
 
         return report(request)
 
 
 class DbData(APIView):
-
-    permission_classes = [IsAdminUser|IsMemberBcf]
+    permission_classes = [IsAdminUser | IsMemberBcf]
 
     def get(self, request):
-
         return database_data(request)

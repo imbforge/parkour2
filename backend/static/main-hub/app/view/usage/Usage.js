@@ -26,9 +26,9 @@ Ext.define("MainHub.view.usage.Usage", {
           itemId: "download-report-button",
           cls: "download-report-button",
           iconCls: "fa fa-download fa-lg",
-          text: "Download Report",
-        },
-      ],
+          text: "Download Report"
+        }
+      ]
     },
     {
       xtype: "container",
@@ -37,7 +37,7 @@ Ext.define("MainHub.view.usage.Usage", {
       layout: {
         type: "hbox",
         pack: "center",
-        align: "center",
+        align: "center"
       },
       items: [
         {
@@ -51,24 +51,24 @@ Ext.define("MainHub.view.usage.Usage", {
             mainBtnTextColor: "#999",
             mainBtnIconCls: "x-fa fa-calendar",
             presetPeriodsBtnIconCls: "x-fa fa-calendar-check-o",
-            confirmBtnIconCls: "x-fa fa-check",
-          },
+            confirmBtnIconCls: "x-fa fa-check"
+          }
         },
         {
           xtype: "combobox",
           id: "statusCb",
           itemId: "statusCb",
           fieldLabel: "Status",
-          labelWidth: 45,
-          width: 180,
-          padding: "0 0 0 15px",
+          labelWidth: 40,
+          width: 170,
+          padding: "0 0 0 10px",
           store: Ext.create("Ext.data.Store", {
             fields: ["name", "label"],
             data: [
               { status: "submitted", label: "Submitted" },
-              { status: "sequenced", label: "Sequenced" },
+              { status: "sequenced", label: "Sequenced" }
             ],
-            proxy: { type: "memory" },
+            proxy: { type: "memory" }
           }),
           queryMode: "local",
           displayField: "label",
@@ -78,10 +78,28 @@ Ext.define("MainHub.view.usage.Usage", {
             afterrender: function () {
               // Set default value upon rendering
               this.setValue("submitted");
-            },
-          },
+            }
+          }
         },
-      ],
+        {
+          xtype: "combobox",
+          itemId: "usage-organization-combobox",
+          fieldLabel: "Organization",
+          store: "Organizations",
+          queryMode: "local",
+          valueField: "id",
+          displayField: "name",
+          forceSelection: false,
+          labelWidth: 80,
+          width: 200,
+          padding: "0 0 0 10px",
+          listeners: {
+            expand: function (combo) {
+              combo.getStore().insert(0, { id: -1, name: "All" });
+            }
+          }
+        }
+      ]
     },
     {
       xtype: "usagerecords",

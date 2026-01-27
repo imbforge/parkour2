@@ -11,34 +11,53 @@ Ext.define("MainHub.view.usage.UsageController", {
         select: "setRange"
       },
       "#statusCb": {
-        select: "setStatus",
+        select: "setStatus"
+      },
+      "#usage-organization-combobox": {
+        select: "setOrganization"
       },
       usagerecords: {},
       "#download-report-button": {
-        click: "downloadReport",
-      },
-    },
+        click: "downloadReport"
+      }
+    }
   },
 
   activate: function (view) {
     var dateRange = view.down("daterangepicker");
     var status = view.down("#statusCb").getValue();
-    this.loadData(view, dateRange.getPickerValue(), status);
+    var organizationCb = view.down("#usage-organization-combobox");
+    organizationCb.getStore().reload();
+    this.loadData(
+      view,
+      dateRange.getPickerValue(),
+      status,
+      organizationCb.getValue()
+    );
   },
 
   setRange: function (drp, dateRange) {
     var view = drp.up("usage");
     var status = view.down("#statusCb").getValue();
-    this.loadData(view, dateRange, status);
+    var organization = view.down("#usage-organization-combobox").getValue();
+    this.loadData(view, dateRange, status, organization);
   },
 
   setStatus: function (cb) {
     var view = cb.up("usage");
     var dateRange = view.down("daterangepicker").getPickerValue();
-    this.loadData(view, dateRange, cb.getValue());
+    var organization = view.down("#usage-organization-combobox").getValue();
+    this.loadData(view, dateRange, cb.getValue(), organization);
   },
 
-  loadData: function (view, dateRange, status) {
+  setOrganization: function (cb) {
+    var view = cb.up("usage");
+    var dateRange = view.down("daterangepicker").getPickerValue();
+    var status = view.down("#statusCb").getValue();
+    this.loadData(view, dateRange, status, cb.getValue());
+  },
+
+  loadData: function (view, dateRange, status, organization) {
     var chartPanels = [
       "usagerecords",
       "usageorganizations",
@@ -58,6 +77,7 @@ Ext.define("MainHub.view.usage.UsageController", {
           start: dateRange.startDateObj,
           end: dateRange.endDateObj,
           status: status,
+          organization: organization > 0 ? organization : null
         },
         callback: function (data) {
           panel.setLoading(false);
@@ -93,6 +113,7 @@ Ext.define("MainHub.view.usage.UsageController", {
     var end = dateRange.endDateFmt ? dateRange.endDateFmt : "";
 
     var status = view.down("#statusCb").getValue();
+    var organization = view.down("#usage-organization-combobox").getValue();
 
     var form = Ext.create("Ext.form.Panel", { standardSubmit: true });
     form.submit({
@@ -102,13 +123,14 @@ Ext.define("MainHub.view.usage.UsageController", {
         start: start,
         end: end,
         status: status,
+        organization: organization
       },
       failure: function () {
         new Noty({
           text: "There was an error, the report could not be downloaded.",
-          type: "error",
+          type: "error"
         }).show();
-      },
+      }
     });
-  },
+  }
 });
