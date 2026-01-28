@@ -38,7 +38,7 @@ Ext.define("MainHub.view.usage.Usage", {
       itemId: "usageFilterBar",
       layout: {
         type: "hbox",
-        pack: "center",
+        pack: "left",
         align: "center"
       },
       items: [
@@ -95,7 +95,7 @@ Ext.define("MainHub.view.usage.Usage", {
           displayField: "name",
           forceSelection: false,
           labelWidth: 80,
-          width: 200,
+          width: 220,
           padding: "0 0 0 10px"
         },
         {
@@ -108,7 +108,7 @@ Ext.define("MainHub.view.usage.Usage", {
           displayField: "name",
           forceSelection: false,
           labelWidth: 17,
-          width: 140,
+          width: 220,
           padding: "0 0 0 10px"
         }
       ]
