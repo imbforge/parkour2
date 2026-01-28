@@ -34,6 +34,8 @@ Ext.define("MainHub.view.usage.Usage", {
       xtype: "container",
       userCls: "big-100",
       style: { textAlign: "center" },
+      id: "usageFilterBar",
+      itemId: "usageFilterBar",
       layout: {
         type: "hbox",
         pack: "center",
@@ -42,6 +44,8 @@ Ext.define("MainHub.view.usage.Usage", {
       items: [
         {
           xtype: "daterangepicker",
+          id: "datePicker",
+          itemId: "datePicker",
           ui: "header",
           cls: "daterangepicker",
           padding: 0,
@@ -85,19 +89,27 @@ Ext.define("MainHub.view.usage.Usage", {
           xtype: "combobox",
           itemId: "usage-organization-combobox",
           fieldLabel: "Organization",
-          store: "Organizations",
+          store: "UsageOrganizationSelection",
           queryMode: "local",
           valueField: "id",
           displayField: "name",
           forceSelection: false,
           labelWidth: 80,
           width: 200,
-          padding: "0 0 0 10px",
-          listeners: {
-            expand: function (combo) {
-              combo.getStore().insert(0, { id: -1, name: "All" });
-            }
-          }
+          padding: "0 0 0 10px"
+        },
+        {
+          xtype: "combobox",
+          itemId: "usage-pi-combobox",
+          fieldLabel: "PI",
+          store: "UsagePrincipalInvestigatorSelection",
+          queryMode: "local",
+          valueField: "id",
+          displayField: "name",
+          forceSelection: false,
+          labelWidth: 17,
+          width: 140,
+          padding: "0 0 0 10px"
         }
       ]
     },

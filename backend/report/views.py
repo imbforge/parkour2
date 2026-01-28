@@ -32,7 +32,7 @@ Lane = apps.get_model("flowcell", "Lane")
 
 
 class Report:
-    def __init__(self, start, end, sequenced=False, organization_id=None):
+    def __init__(self, start, end, sequenced=False, organization_id=None, pi_id=None):
         # Filter libraries and samples by when a request was submitted
         libraries_qs = (
             Library.objects.select_related("library_protocol", "library_type")
@@ -65,6 +65,11 @@ class Report:
             samples_qs = samples_qs.filter(
                 request__cost_unit__organization__id=organization_id
             )
+
+        # If required, report only records from requests that belong to a specific pi
+        if pi_id:
+            libraries_qs = libraries_qs.filter(request__pi__id=pi_id)
+            samples_qs = samples_qs.filter(request__pi__id=pi_id)
 
         self.requests = (
             Request.objects.filter(archived=False)
@@ -135,6 +140,11 @@ class Report:
             self.flowcells = self.flowcells.filter(
                 requests__cost_unit__organization__id=organization_id
             )
+
+        # If required, report only records from requests that belong to a specific pi
+        if pi_id:
+            self.requests = self.requests.filter(pi__id=pi_id)
+            self.flowcells = self.flowcells.filter(requests__pi__id=pi_id)
 
     def get_total_counts(self):
         data = []
@@ -832,7 +842,10 @@ def report(request):
     start = request.GET.get("start", now)
     end = request.GET.get("end", now)
 
-    organization = request.GET.get("organization", False)
+    organization_id = request.GET.get("organization", "-1")
+    organization_id = organization_id if organization_id.isdigit() else None
+    pi_id = request.GET.get("pi", "-1")
+    pi_id = pi_id if pi_id.isdigit() else None
 
     download = request.GET.get("download", False)
     download = True if download else False
@@ -864,7 +877,7 @@ def report(request):
     # projects
     for status_label, status in [("Submitted", False), ("Sequenced", True)]:
         data = {}
-        report = Report(start, end, status, organization)
+        report = Report(start, end, status, organization_id, pi_id)
 
         # Total Sample Count
         data["total_counts"] = report.get_total_counts()
@@ -904,11 +917,18 @@ def report(request):
     if download:
         wb = download_report(all_data, start, end)
 
-        filename = f"Report_{start.strftime('%d%m%Y')}_{end.strftime('%d%m%Y')}.xlsx"
+        filename = (
+            f"ParkourUsageReport_{start.strftime('%d%m%Y')}_{end.strftime('%d%m%Y')}"
+        )
+        if organization_id:
+            filename += f"_{organization_id}"
+        if pi_id:
+            filename += f"_{pi_id}"
+
         response = HttpResponse(
             content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
-        response["Content-Disposition"] = f'attachment; filename="{filename}"'
+        response["Content-Disposition"] = f'attachment; filename="{filename}.xlsx"'
 
         wb.save(response)
         return response

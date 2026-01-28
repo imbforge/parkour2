@@ -54,6 +54,7 @@ class RecordsUsage(APIView):
         start, end = get_date_range(request, "%Y-%m-%dT%H:%M:%S")
         status = request.query_params.get("status", "submitted")
         organization_id = request.query_params.get("organization", None)
+        pi_id = request.query_params.get("pi", None)
 
         libraries = Library.objects.filter(
             request__isnull=False,
@@ -79,6 +80,10 @@ class RecordsUsage(APIView):
                 request__cost_unit__organization__id=organization_id
             )
 
+        if pi_id:
+            samples = samples.filter(request__pi__id=pi_id)
+            libraries = libraries.filter(request__pi__id=pi_id)
+
         return Response(
             [
                 {
@@ -100,6 +105,8 @@ class OrganizationsUsage(APIView):
         start, end = get_date_range(request, "%Y-%m-%dT%H:%M:%S")
         status = request.query_params.get("status", "submitted")
         organization_id = request.query_params.get("organization", None)
+        pi_id = request.query_params.get("pi", None)
+        selection = "selection" in request.query_params.keys()
 
         libraries_qs = Library.objects.filter(
             request__isnull=False,
@@ -116,13 +123,17 @@ class OrganizationsUsage(APIView):
             samples_qs = samples_qs.filter(request__sequenced=True)
             libraries_qs = libraries_qs.filter(request__sequenced=True)
 
-        if organization_id:
+        if not selection and organization_id:
             samples_qs = samples_qs.filter(
                 request__cost_unit__organization__id=organization_id
             )
             libraries_qs = libraries_qs.filter(
                 request__cost_unit__organization__id=organization_id
             )
+
+        if pi_id:
+            samples_qs = samples_qs.filter(request__pi__id=pi_id)
+            libraries_qs = libraries_qs.filter(request__pi__id=pi_id)
 
         requests = (
             Request.objects.select_related(
@@ -142,22 +153,44 @@ class OrganizationsUsage(APIView):
         if status == "sequenced":
             requests = requests.filter(sequenced=True)
 
-        if organization_id:
+        if not selection and organization_id:
             requests = requests.filter(cost_unit__organization__id=organization_id)
 
+        if pi_id:
+            requests = requests.filter(pi__id=pi_id)
+
         counts = {}
+        organizations = {}
         for req in requests:
             organization = req.cost_unit.organization
-            org_name = organization.name if organization else "None"
-            if org_name not in counts.keys():
-                counts[org_name] = {"libraries": 0, "samples": 0}
-            counts[org_name]["libraries"] += len(req.fetched_libraries)
-            counts[org_name]["samples"] += len(req.fetched_samples)
+            organizations[organization.id] = (
+                organization.name if organization else "None"
+            )
+            if organization.id not in counts.keys():
+                counts[organization.id] = {"libraries": 0, "samples": 0}
+            counts[organization.id]["libraries"] += len(req.fetched_libraries)
+            counts[organization.id]["samples"] += len(req.fetched_samples)
 
         data = [
-            {"name": organization, "data": sum(count.values())}
-            for organization, count in counts.items()
+            {
+                "id": organization_id,
+                "name": organizations[organization_id],
+                "data": sum(count.values()),
+            }
+            for organization_id, count in counts.items()
         ]
+
+        data = sorted(data, key=lambda x: x["name"])
+
+        if selection:
+            data.insert(
+                0,
+                {
+                    "id": -1,
+                    "name": "All",
+                    "data": None,
+                },
+            )
 
         return Response(data)
 
@@ -169,6 +202,8 @@ class PrincipalInvestigatorsUsage(APIView):
         start, end = get_date_range(request, "%Y-%m-%dT%H:%M:%S")
         status = request.query_params.get("status", "submitted")
         organization_id = request.query_params.get("organization", None)
+        pi_id = request.query_params.get("pi", None)
+        selection = "selection" in request.query_params.keys()
 
         libraries_qs = Library.objects.filter(
             request__isnull=False,
@@ -193,6 +228,10 @@ class PrincipalInvestigatorsUsage(APIView):
                 request__cost_unit__organization__id=organization_id
             )
 
+        if not selection and pi_id:
+            samples_qs = samples_qs.filter(request__pi__id=pi_id)
+            libraries_qs = libraries_qs.filter(request__pi__id=pi_id)
+
         requests = (
             Request.objects.filter(archived=False)
             .prefetch_related(
@@ -211,18 +250,23 @@ class PrincipalInvestigatorsUsage(APIView):
         if organization_id:
             requests = requests.filter(cost_unit__organization__id=organization_id)
 
+        if not selection and pi_id:
+            requests = requests.filter(pi__id=pi_id)
+
         counts = {}
+        pis = {}
         for req in requests:
             pi = req.pi
-            pi_name = pi.full_name if pi else "None"
-            if pi_name not in counts.keys():
-                counts[pi_name] = {"libraries": 0, "samples": 0}
-            counts[pi_name]["libraries"] += len(req.fetched_libraries)
-            counts[pi_name]["samples"] += len(req.fetched_samples)
+            pis[pi.id] = pi.full_name if pi else "None"
+            if pi.id not in counts.keys():
+                counts[pi.id] = {"libraries": 0, "samples": 0}
+            counts[pi.id]["libraries"] += len(req.fetched_libraries)
+            counts[pi.id]["samples"] += len(req.fetched_samples)
 
         data = [
             {
-                "name": pi,
+                "id": pi,
+                "name": pis[pi],
                 "data": sum(count.values()),
                 "libraries": count["libraries"],
                 "samples": count["samples"],
@@ -231,6 +275,17 @@ class PrincipalInvestigatorsUsage(APIView):
         ]
 
         data = sorted(data, key=lambda x: x["name"])
+
+        if selection:
+            data.insert(
+                0,
+                {
+                    "id": -1,
+                    "name": "All",
+                    "data": None,
+                },
+            )
+
         return Response(data)
 
 
@@ -241,6 +296,7 @@ class LibraryTypesUsage(APIView):
         start, end = get_date_range(request, "%Y-%m-%dT%H:%M:%S")
         status = request.query_params.get("status", "submitted")
         organization_id = request.query_params.get("organization", None)
+        pi_id = request.query_params.get("pi", None)
 
         libraries_qs = (
             Library.objects.select_related("library_type")
@@ -273,6 +329,10 @@ class LibraryTypesUsage(APIView):
                 request__cost_unit__organization__id=organization_id
             )
 
+        if pi_id:
+            samples_qs = samples_qs.filter(request__pi__id=pi_id)
+            libraries_qs = libraries_qs.filter(request__pi__id=pi_id)
+
         requests = (
             Request.objects.filter(archived=False)
             .prefetch_related(
@@ -290,6 +350,9 @@ class LibraryTypesUsage(APIView):
 
         if organization_id:
             requests = requests.filter(cost_unit__organization__id=organization_id)
+
+        if pi_id:
+            requests = requests.filter(pi__id=pi_id)
 
         counts = {}
         for req in requests:

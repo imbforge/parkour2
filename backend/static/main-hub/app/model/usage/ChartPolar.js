@@ -3,6 +3,10 @@ Ext.define("MainHub.model.usage.ChartPolar", {
 
   fields: [
     {
+      name: "id",
+      type: "int"
+    },
+    {
       name: "name",
       type: "string"
     },
