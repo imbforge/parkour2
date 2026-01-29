@@ -36,22 +36,6 @@ Ext.define("MainHub.view.usage.UsageController", {
     this.loadData(organizationCb);
   },
 
-  setRange: function (drp) {
-    this.loadData(drp);
-  },
-
-  setStatus: function (cb) {
-    this.loadData(cb);
-  },
-
-  setOrganization: function (cb) {
-    this.loadData(cb);
-  },
-
-  setPi: function (cb) {
-    this.loadData(cb);
-  },
-
   loadData: function (field) {
     var chartPanels = [
       "usagerecords",
