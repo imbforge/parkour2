@@ -76,3 +76,5 @@ manage.py
 
 # Others
 .env
+.local/
+.local
