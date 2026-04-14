@@ -1,6 +1,6 @@
 Ext.define("validator.IndexI7Batch", {
   extend: "Ext.data.validator.Validator",
-  alias: "data.validator.indexI7batch",
+  alias: "data.validator.IndexI7Batch",
   validate: function (value, record) {
     var pattern = new RegExp("^(?=(?:.{6}|.{8}|.{10}|.{12}|.{24})$)[ATCG]+$");
     return (
@@ -15,7 +15,7 @@ Ext.define("validator.IndexI7Batch", {
 
 Ext.define("validator.IndexI5Batch", {
   extend: "Ext.data.validator.Validator",
-  alias: "data.validator.indexI5batch",
+  alias: "data.validator.IndexI5Batch",
   validate: function (value, record) {
     var pattern = new RegExp("^(?=(?:.{6}|.{8}|.{10}|.{12}|.{24})$)[ATCG]+$");
     return (
