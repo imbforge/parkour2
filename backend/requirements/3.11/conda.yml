@@ -1,0 +1,6 @@
+name: parkour-py3.11.15
+channels:
+  - defaults
+dependencies:
+  - pip
+  - python=3.11.15
