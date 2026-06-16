@@ -61,7 +61,26 @@ Ext.define("validator.Concentration", {
     }
 
     return isValid || "Must be present";
-  },
+  }
+});
+
+Ext.define("validator.BatchAddName", {
+  extend: "Ext.data.validator.Validator",
+  alias: "data.validator.batchaddname",
+
+  validate: function (value) {
+    var pattern =
+      /^[A-Za-z0-9]+_[A-Za-z0-9]+_2[0-9]{3}_(?:0[1-9]|[1-9][0-9])_(?=\d{2,}_)[0-9]*[1-9]\d*(?:_[A-Za-z0-9]+)+$/;
+
+    return (
+      pattern.test(value) ||
+      "• Only letters, numbers and underscores allowed<br>" +
+        "• [organization]_[name]_[year]_[project number]_[sample number]_[... details]<br>" +
+        "• Sample numbers must be at least 2 digits and zero-padded<br>" +
+        "• At least one details field is required<br>" +
+        "• e.g. imb_muster_2020_03_087_brca1_plusDox"
+    );
+  }
 });
 
 Ext.define("MainHub.model.libraries.BatchAdd.Common", {
@@ -131,11 +150,11 @@ Ext.define("MainHub.model.libraries.BatchAdd.Common", {
     },
     {
       type: "string",
-      name: "source",
+      name: "source"
     },
     {
       type: "string",
-      name: "comments",
+      name: "comments"
     },
     {
       type: "bool",
@@ -155,6 +174,9 @@ Ext.define("MainHub.model.libraries.BatchAdd.Common", {
         type: "presence"
       },
       {
+        type: "batchaddname"
+      },
+      {
         type: "unique",
         dataIndex: "name"
       }
@@ -167,6 +189,6 @@ Ext.define("MainHub.model.libraries.BatchAdd.Common", {
     amplification_cycles: "presence",
     concentration_method: "concentration",
     organism: "presence",
-    source: "presence",
-  },
+    source: "presence"
+  }
 });

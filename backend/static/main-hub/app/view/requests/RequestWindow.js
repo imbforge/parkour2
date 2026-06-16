@@ -4,7 +4,7 @@ Ext.define("MainHub.view.requests.RequestWindow", {
     "MainHub.view.requests.RequestWindowController",
     "MainHub.view.libraries.LibraryWindow",
     "MainHub.view.libraries.BatchAddWindow",
-    "MainHub.components.RequestFileGridField",
+    "MainHub.components.RequestFileGridField"
   ],
   controller: "requests-requestwindow",
 
@@ -49,10 +49,15 @@ Ext.define("MainHub.view.requests.RequestWindow", {
                   fieldLabel:
                     '<span data-qtip="The name of the request/project, as provided by the Bioinformatics CF">Name</span>',
                   emptyText:
-                    "Project name, e.g. imb_2020_03_smith_rnaseq_[...]",
+                    "Project name, e.g. imb_muster_2020_03_rnaseq_[...]",
                   allowBlank: false,
-                  regex: /^[A-Za-z0-9_]+$/,
-                  regexText: "Only A-Z a-z 0-9 and _ are allowed",
+                  regex:
+                    /^[A-Za-z0-9]+_[A-Za-z0-9]+_2[0-9]{3}_(?:0[1-9]|[1-9][0-9])(?:_[A-Za-z0-9]+)+$/,
+                  regexText:
+                    "• Underscore-separated, at least four parts<br>" +
+                    "• [organization]_[name]_[2000-2999 year]_[01-99 project number]_[... details]<br>" +
+                    "• Only letters, numbers and underscores allowed<br>" +
+                    "• Example: imb_muster_2020_03_rnaseq_[...]"
                 },
                 {
                   xtype: "fieldcontainer",
@@ -83,12 +88,12 @@ Ext.define("MainHub.view.requests.RequestWindow", {
                               params: {
                                 principal_investigator_id: cb.value
                                   ? cb.value
-                                  : null,
-                              },
+                                  : null
+                              }
                             });
-                          },
-                        },
-                      },
+                          }
+                        }
+                      }
                     },
                     {
                       xtype: "combobox",
@@ -103,9 +108,9 @@ Ext.define("MainHub.view.requests.RequestWindow", {
                       fieldLabel: "Cost Unit",
                       allowBlank: false,
                       forceSelection: true,
-                      store: "CostUnits",
-                    },
-                  ],
+                      store: "CostUnits"
+                    }
+                  ]
                 },
                 {
                   xtype: "combobox",
@@ -118,7 +123,7 @@ Ext.define("MainHub.view.requests.RequestWindow", {
                   emptyText: "Bioinformatician",
                   allowBlank: false,
                   forceSelection: true,
-                  store: "Bioinformaticians",
+                  store: "Bioinformaticians"
                 },
                 {
                   xtype: "combobox",
@@ -127,18 +132,18 @@ Ext.define("MainHub.view.requests.RequestWindow", {
                   queryMode: "local",
                   valueField: "id",
                   displayField: "name",
-                  fieldLabel: 'Seq. Kit',
+                  fieldLabel: "Seq. Kit",
                   emptyText: "Sequencing kit",
                   allowBlank: false,
                   forceSelection: true,
                   store: "PoolSizes",
                   listConfig: {
                     itemTpl:
-                    '<span data-qtip="' +
-                    '{[values.multiplier ? "# lanes: " + values.multiplier + "&lt;br /&gt;" : ""]}' +
-                    '{[values.size ? "# M reads: " + values.size.toLocaleString() + "&lt;br /&gt;" : ""]}' +
-                    '{[values.cycles ? "# cycles: " + values.cycles : ""]}' +
-                    '">{name}</span>'
+                      '<span data-qtip="' +
+                      '{[values.multiplier ? "# lanes: " + values.multiplier + "&lt;br /&gt;" : ""]}' +
+                      '{[values.size ? "# M reads: " + values.size.toLocaleString() + "&lt;br /&gt;" : ""]}' +
+                      '{[values.cycles ? "# cycles: " + values.cycles : ""]}' +
+                      '">{name}</span>'
                   },
                   listeners: {
                     change: function (cb) {
@@ -156,11 +161,11 @@ Ext.define("MainHub.view.requests.RequestWindow", {
                           pool_size_user: requestFormFieldValues.pool_size_user
                             ? requestFormFieldValues.pool_size_user
                             : 0,
-                          request_id: requestId,
-                        },
+                          request_id: requestId
+                        }
                       });
-                    },
-                  },
+                    }
+                  }
                 },
                 {
                   name: "description",
@@ -169,7 +174,7 @@ Ext.define("MainHub.view.requests.RequestWindow", {
                   xtype: "textarea",
                   fieldLabel: "Description",
                   emptyText: "Description",
-                  height: 85,
+                  height: 85
                 },
                 {
                   xtype: "fieldcontainer",
@@ -184,7 +189,7 @@ Ext.define("MainHub.view.requests.RequestWindow", {
                       boxLabel:
                         '<span data-qtip="Check, if the libraries are already pooled">?</span>',
                       disabled: true,
-                      readOnly: true,
+                      readOnly: true
                     },
                     {
                       xtype: "numberfield",
@@ -199,7 +204,7 @@ Ext.define("MainHub.view.requests.RequestWindow", {
                       disabled: true,
                       hideTrigger: true,
                       keyNavEnabled: false,
-                      mouseWheelEnabled: false,
+                      mouseWheelEnabled: false
                     },
                     {
                       xtype: "numberfield",
@@ -213,7 +218,7 @@ Ext.define("MainHub.view.requests.RequestWindow", {
                       disabled: true,
                       hideTrigger: true,
                       keyNavEnabled: false,
-                      mouseWheelEnabled: false,
+                      mouseWheelEnabled: false
                     },
                     {
                       xtype: "numberfield",
@@ -226,9 +231,9 @@ Ext.define("MainHub.view.requests.RequestWindow", {
                       labelWidth: 20,
                       width: 107,
                       padding: "0 0 0 10px",
-                      allowDecimals: false,
-                    },
-                  ],
+                      allowDecimals: false
+                    }
+                  ]
                 },
                 {
                   xtype: "requestfilegridfield",
@@ -241,9 +246,9 @@ Ext.define("MainHub.view.requests.RequestWindow", {
             {
               id: "uploadedDeepSeqRequest",
               border: 0,
-              html: '<span id="approved-request-file">Not yet approved</span>',
-            },
-          ],
+              html: '<span id="approved-request-file">Not yet approved</span>'
+            }
+          ]
         },
         {
           xtype: "grid",
@@ -299,14 +304,14 @@ Ext.define("MainHub.view.requests.RequestWindow", {
               xtype: "button",
               itemId: "export-libraries-excel",
               iconCls: "fa fa-file-excel-o fa-lg",
-              tooltip: "Export all samples/libraries to Excel",
+              tooltip: "Export all samples/libraries to Excel"
             },
             "->",
             {
               itemId: "batch-add-button",
               cls: "pl-batch-add-button",
-              text: "Add",
-            },
+              text: "Add"
+            }
           ],
           listeners: {
             // Open Batch Window by double record
@@ -324,7 +329,7 @@ Ext.define("MainHub.view.requests.RequestWindow", {
                 scope: this,
                 params: {
                   request_id: null,
-                  ids: Ext.JSON.encode([id]),
+                  ids: Ext.JSON.encode([id])
                 },
 
                 success: function (response) {
@@ -339,7 +344,7 @@ Ext.define("MainHub.view.requests.RequestWindow", {
                     Ext.create("MainHub.view.libraries.BatchAddWindow", {
                       mode: "edit",
                       type: record.get("record_type"),
-                      records: obj.data,
+                      records: obj.data
                     });
                   } else {
                     new Noty({ text: obj.message, type: "error" }).show();
@@ -358,13 +363,13 @@ Ext.define("MainHub.view.requests.RequestWindow", {
                     : responseText;
                   new Noty({ text: responseText, type: "error" }).show();
                   console.error(response);
-                },
+                }
               });
-            },
-          },
-        },
-      ],
-    },
+            }
+          }
+        }
+      ]
+    }
   ],
   bbar: [
     {
@@ -372,16 +377,13 @@ Ext.define("MainHub.view.requests.RequestWindow", {
       layout: {
         type: "hbox",
         pack: "center",
-        align: "center",
+        align: "center"
       },
       style: {
         border: "1px solid #d0d0d0",
-        padding: "5px",
+        padding: "5px"
       },
-      hidden: !(
-        USER.is_staff ||
-        USER.member_of_bcf
-      ),
+      hidden: !(USER.is_staff || USER.member_of_bcf),
       items: [
         {
           xtype: "combobox",
@@ -397,7 +399,7 @@ Ext.define("MainHub.view.requests.RequestWindow", {
           emptyText: "GCF staff member",
           allowBlank: true,
           forceSelection: false,
-          store: "StaffMembers",
+          store: "StaffMembers"
         },
         {
           xtype: "datefield",
@@ -412,9 +414,9 @@ Ext.define("MainHub.view.requests.RequestWindow", {
           labelWidth: 80,
           width: 215,
           allowBlank: true,
-          forceSelection: false,
-        },
-      ],
+          forceSelection: false
+        }
+      ]
     },
     "->",
     {
