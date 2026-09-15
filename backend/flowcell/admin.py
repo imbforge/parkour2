@@ -6,7 +6,7 @@ from django.templatetags.static import static
 from django.urls import reverse
 from django.utils.safestring import mark_safe
 from django.contrib import admin
-from flowcell.models import Flowcell, Sequencer, Lane
+from flowcell.models import Flowcell, Sequencer, Lane, SequencingProvider
 from index_generator.models import PoolSize
 
 
@@ -60,14 +60,20 @@ class LaneInline(admin.TabularInline):
 
     @admin.display(description="")
     def edit_link(self, instance):
-
         lane = instance.lane
-        url = reverse(f'admin:{lane._meta.app_label}_{lane._meta.model_name}_change', args=[lane.id]) + \
-              '?_to_field=id&_popup=1'
+        url = (
+            reverse(
+                f"admin:{lane._meta.app_label}_{lane._meta.model_name}_change",
+                args=[lane.id],
+            )
+            + "?_to_field=id&_popup=1"
+        )
         icon_changelink_url = static("admin/img/icon-changelink.svg")
-        return mark_safe(f'<a id="lane-{lane.id}" class="related-widget-wrapper-link '
-                         f'add-related" data-popup="yes" href="{url}"><img src='
-                         f'{icon_changelink_url} alt="Change"></a>')
+        return mark_safe(
+            f'<a id="lane-{lane.id}" class="related-widget-wrapper-link '
+            f'add-related" data-popup="yes" href="{url}"><img src='
+            f'{icon_changelink_url} alt="Change"></a>'
+        )
 
     def has_add_permission(self, request, obj=None):
         return False
@@ -75,12 +81,24 @@ class LaneInline(admin.TabularInline):
 
 class PoolSizeInline(admin.TabularInline):
     model = PoolSize
-    fields = ('short_name', 'lanes', 'size', 'cycles', 'read_lengths', 'archived',)
-    ordering = ('lanes', 'size', 'cycles',)
-    autocomplete_fields = ('read_lengths',)
+    fields = (
+        "short_name",
+        "lanes",
+        "size",
+        "cycles",
+        "read_lengths",
+        "archived",
+    )
+    ordering = (
+        "lanes",
+        "size",
+        "cycles",
+    )
+    autocomplete_fields = ("read_lengths",)
     extra = 1
-    verbose_name = 'Sequencing kit' # PoolSize as Sequencing kit
-    verbose_name_plural = 'Sequencing kits'
+    verbose_name = "Sequencing kit"  # PoolSize as Sequencing kit
+    verbose_name_plural = "Sequencing kits"
+
 
 @admin.register(Sequencer)
 class SequencerAdmin(admin.ModelAdmin):
@@ -105,11 +123,8 @@ class SequencerAdmin(admin.ModelAdmin):
 
 @admin.register(Flowcell)
 class FlowcellAdmin(admin.ModelAdmin):
-    list_display = (
-        "flowcell_id",
-        "pool_size",
-        "archived"
-    )
+    list_display = ("flowcell_id", "quote_id", "pool_size", "archived")
+    list_display_links = ("flowcell_id", "quote_id")
     list_filter = ("pool_size", ArchivedFilter)
     exclude = (
         "lanes",
@@ -122,6 +137,14 @@ class FlowcellAdmin(admin.ModelAdmin):
         "mark_as_non_archived",
     )
 
+    @admin.display(description="Quote ID")
+    def quote_id(self, obj):
+        if obj.sequencing_provider.name.strip().lower() != "internal":
+            return (
+                f"{obj.sequencing_provider.name} - {obj.sequencing_provider_quote_id}"
+            )
+        return ""
+
     @admin.action(description="Mark as archived")
     def mark_as_archived(self, request, queryset):
         queryset.update(archived=True)
@@ -133,7 +156,6 @@ class FlowcellAdmin(admin.ModelAdmin):
 
 @admin.register(Lane)
 class LaneAdmin(admin.ModelAdmin):
-
     list_display = (
         "name",
         "pool",
@@ -150,7 +172,29 @@ class LaneAdmin(admin.ModelAdmin):
         "completed",
     )
 
-    readonly_fields = ('name', 'pool',)
+    readonly_fields = (
+        "name",
+        "pool",
+    )
 
     def has_module_permission(self, request):
         return False
+
+
+@admin.register(SequencingProvider)
+class SequencingProviderAdmin(admin.ModelAdmin):
+    list_display = ("name", "archived")
+    list_filter = (ArchivedFilter,)
+
+    actions = (
+        "mark_as_archived",
+        "mark_as_non_archived",
+    )
+
+    @admin.action(description="Mark as archived")
+    def mark_as_archived(self, request, queryset):
+        queryset.update(archived=True)
+
+    @admin.action(description="Mark as non-archived")
+    def mark_as_non_archived(self, request, queryset):
+        queryset.update(archived=False)

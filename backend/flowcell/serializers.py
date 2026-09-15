@@ -1,5 +1,4 @@
 import itertools
-from pprint import pprint
 
 from django.apps import apps
 from django.db.models import Q
@@ -18,6 +17,7 @@ Request = apps.get_model("request", "Request")
 Library = apps.get_model("library", "Library")
 Sample = apps.get_model("sample", "Sample")
 Pool = apps.get_model("index_generator", "Pool")
+SequencingProvider = apps.get_model("flowcell", "SequencingProvider")
 
 
 class SequencerSerializer(ModelSerializer):
@@ -182,6 +182,7 @@ class FlowcellListSerializer(ModelSerializer):
     sequencer = SerializerMethodField()
     sequencer_name = SerializerMethodField()
     pool_size_name = SerializerMethodField()
+    sequencing_provider_name = SerializerMethodField()
     lanes = LaneSerializer(many=True)
 
     class Meta:
@@ -189,6 +190,9 @@ class FlowcellListSerializer(ModelSerializer):
         fields = (
             "flowcell",
             "flowcell_id",
+            "sequencing_provider",
+            "sequencing_provider_name",
+            "sequencing_provider_quote_id",
             "sequencer",
             "sequencer_name",
             "pool_size_name",
@@ -209,6 +213,11 @@ class FlowcellListSerializer(ModelSerializer):
     def get_pool_size_name(self, obj):
         return str(obj.pool_size)
 
+    def get_sequencing_provider_name(self, obj):
+        if obj.sequencing_provider:
+            return str(obj.sequencing_provider.name)
+        return None
+
     def to_representation(self, instance):
         data = super().to_representation(instance)
 
@@ -218,14 +227,16 @@ class FlowcellListSerializer(ModelSerializer):
         return list(
             map(
                 lambda x: {
-                    **{
-                        "flowcell": data["flowcell"],
-                        "flowcell_id": data["flowcell_id"],
-                        "sequencer": data["sequencer"],
-                        "pool_size_name": data["pool_size_name"],
-                        "sequencer_name": data["sequencer_name"],
-                        "create_time": data["create_time"],
-                    },
+                    "flowcell": data["flowcell"],
+                    "flowcell_id": data["flowcell_id"],
+                    "sequencer": data["sequencer"],
+                    "pool_size_name": data["pool_size_name"],
+                    "sequencer_name": data["sequencer_name"],
+                    "create_time": data["create_time"],
+                    "sequencing_provider_name": data["sequencing_provider_name"],
+                    "sequencing_provider_quote_id": data[
+                        "sequencing_provider_quote_id"
+                    ],
                     **x,
                 },
                 data.pop("lanes"),
@@ -240,7 +251,15 @@ class FlowcellSerializer(ModelSerializer):
             "flowcell_id",
             "pool_size",
             "sample_sheet",
+            "sequencing_provider",
+            "sequencing_provider_quote_id",
         )
+
+    def validate(self, attrs):
+        model_attrs = {key: value for key, value in attrs.items() if key != "lanes"}
+        flowcell = Flowcell(**model_attrs)
+        flowcell.clean()
+        return attrs
 
     def to_internal_value(self, data):
         internal_value = super().to_internal_value(data)
@@ -253,14 +272,15 @@ class FlowcellSerializer(ModelSerializer):
                 }
             )
 
-        # Check if all lanes are loaded
-        pool_size = internal_value.get("pool_size")
-        if len(lanes) != pool_size.lanes:
-            raise ValidationError(
-                {
-                    "lanes": ["All lanes must be loaded."],
-                }
-            )
+        # Not needed anymore since we are not enforcing all lanes to be loaded at once
+        # # Check if all lanes are loaded
+        # pool_size = internal_value.get("pool_size")
+        # if len(lanes) != pool_size.lanes:
+        #     raise ValidationError(
+        #         {
+        #             "lanes": ["All lanes must be loaded."],
+        #         }
+        #     )
 
         internal_value.update({"lanes": lanes})
 
@@ -440,3 +460,13 @@ class PoolInfoSerializer(ModelSerializer):
         data.update({"records": sorted(records, key=lambda x: x["barcode"][3:])})
 
         return data
+
+
+class SequencingProviderSerializer(ModelSerializer):
+    class Meta:
+        model = SequencingProvider
+        fields = (
+            "id",
+            "name",
+            "archived",
+        )

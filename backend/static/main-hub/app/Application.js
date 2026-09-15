@@ -54,6 +54,7 @@ Ext.define("MainHub.Application", {
     "pooling.Pooling",
     "flowcell.Flowcells",
     "flowcell.Sequencer",
+    "flowcell.SequencingProvider",
     "flowcell.Lanes",
     "flowcell.Pool",
     "flowcell.PoolInfo",

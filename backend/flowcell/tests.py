@@ -1,13 +1,17 @@
 import json
+from unittest import skip
+
+from django.core.exceptions import ValidationError
+from django.urls import reverse
 
 from common.tests import BaseTestCase
 from common.utils import get_random_name
-from django.urls import reverse
 from index_generator.tests import create_pool, create_pool_size
 from library.tests import create_library
 from sample.tests import create_sample
 
-from .models import Flowcell, Lane, Sequencer
+from .models import Flowcell, Lane, Sequencer, SequencingProvider
+from .serializers import FlowcellSerializer
 
 
 def create_sequencer(name, lanes=1, lane_capacity=200):
@@ -15,7 +19,9 @@ def create_sequencer(name, lanes=1, lane_capacity=200):
         name=name,
     )
     sequencer.save()
-    create_pool_size(multiplier=lanes, size=lane_capacity, cycles=150, sequencer=sequencer)
+    create_pool_size(
+        multiplier=lanes, size=lane_capacity, cycles=150, sequencer=sequencer
+    )
     return sequencer
 
 
@@ -123,6 +129,50 @@ class TestFlowcellModel(BaseTestCase):
 
     def test_flowcell_sequences(self):
         self.assertIsNone(self.flowcell.sequences)
+
+    def test_external_provider_requires_quote_id(self):
+        provider = SequencingProvider.objects.create(name="Novogene")
+        flowcell = Flowcell(
+            flowcell_id="FC-123",
+            pool_size=create_pool_size(),
+            sequencing_provider=provider,
+            sequencing_provider_quote_id="   ",
+        )
+
+        with self.assertRaises(ValidationError) as ctx:
+            flowcell.full_clean()
+
+        self.assertIn("sequencing_provider_quote_id", ctx.exception.message_dict)
+
+    def test_internal_provider_requires_flowcell_id(self):
+        provider = SequencingProvider.objects.create(name="Internal")
+        flowcell = Flowcell(
+            flowcell_id="",
+            pool_size=create_pool_size(),
+            sequencing_provider=provider,
+            sequencing_provider_quote_id="QUOTE-1",
+        )
+
+        with self.assertRaises(ValidationError) as ctx:
+            flowcell.full_clean()
+
+        self.assertIn("flowcell_id", ctx.exception.message_dict)
+
+    def test_serializer_matches_model_validation_for_internal_provider(self):
+        provider = SequencingProvider.objects.create(name="Internal")
+
+        serializer = FlowcellSerializer(
+            data={
+                "flowcell_id": "",
+                "pool_size": create_pool_size().pk,
+                "sequencing_provider": provider.pk,
+                "sequencing_provider_quote_id": "QUOTE-1",
+                "lanes": [{"name": "L1", "pool_id": create_pool(self.user).pk}],
+            }
+        )
+
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("flowcell_id", serializer.errors)
 
 
 # Views
@@ -327,6 +377,9 @@ class TestFlowcell(BaseTestCase):
         self.assertEqual(data["message"], "Invalid payload.")
         self.assertIn("No lanes are provided.", data["errors"]["lanes"])
 
+    @skip(
+        "Not needed anymore since we are not enforcing all lanes to be loaded at once"
+    )
     def test_create_flowcell_some_lanes_not_loaded(self):
         """Ensure error is thrown if not all lanes are loaded."""
         self.client.login(email="test@test.io", password="foo-bar")

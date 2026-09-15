@@ -6,25 +6,25 @@ Ext.define("MainHub.view.flowcell.FlowcellWindowController", {
     control: {
       "#": {
         boxready: "onWindowReady",
-        beforeclose: "onWindowClose",
+        beforeclose: "onWindowClose"
       },
       "#sequencing-kit-field": {
-        change: "changeSequencer",
+        change: "changeSequencer"
       },
       "#pools-flowcell-grid": {
         render: "initializePoolDragZone",
-        itemcontextmenu: "showAdditionalInformationMenu",
+        itemcontextmenu: "showAdditionalInformationMenu"
       },
       "#flowcell-result-grid": {
-        itemcontextmenu: "showUnloadLaneMenu",
+        itemcontextmenu: "showUnloadLaneMenu"
       },
       "#sample-sheet-illuminav2-button": {
-        click: "createSampleSheetIlluminav2Window",
+        click: "createSampleSheetIlluminav2Window"
       },
       "#save-button": {
-        click: "save",
-      },
-    },
+        click: "save"
+      }
+    }
   },
 
   onWindowReady: function () {
@@ -64,8 +64,8 @@ Ext.define("MainHub.view.flowcell.FlowcellWindowController", {
           id: "lane" + (i + 1),
           width: laneTileWidth,
           listeners: {
-            render: this.initializeLaneDropZone,
-          },
+            render: this.initializeLaneDropZone
+          }
         });
       }
     }
@@ -87,11 +87,11 @@ Ext.define("MainHub.view.flowcell.FlowcellWindowController", {
           handler: function () {
             Ext.create("MainHub.view.flowcell.PoolInfoWindow", {
               title: record.get("name"),
-              pool: record.get("pk"),
+              pool: record.get("pk")
             });
-          },
-        },
-      ],
+          }
+        }
+      ]
     }).showAt(e.getXY());
   },
 
@@ -127,14 +127,14 @@ Ext.define("MainHub.view.flowcell.FlowcellWindowController", {
             sourceEl: sourceEl,
             repairXY: Ext.fly(sourceEl).getXY(),
             ddel: d,
-            poolData: v.getStore().getAt(e.recordIndex).data,
+            poolData: v.getStore().getAt(e.recordIndex).data
           });
         }
       },
 
       getRepairXY: function () {
         return this.dragData.repairXY;
-      },
+      }
     });
   },
 
@@ -247,7 +247,7 @@ Ext.define("MainHub.view.flowcell.FlowcellWindowController", {
           if (!isReadLengthOK(pool)) {
             new Noty({
               text: "Read Length must be the same for all pools on a flowcell.",
-              type: "warning",
+              type: "warning"
             }).show();
             return false;
           }
@@ -267,7 +267,7 @@ Ext.define("MainHub.view.flowcell.FlowcellWindowController", {
             pool_id: pool.get("pk"),
             pool_name: pool.get("name"),
             lane_id: laneId,
-            lane_name: laneName,
+            lane_name: laneName
           });
 
           pool.set("loaded", pool.get("loaded") + 1);
@@ -300,7 +300,7 @@ Ext.define("MainHub.view.flowcell.FlowcellWindowController", {
         }
 
         return false;
-      },
+      }
     });
   },
 
@@ -315,9 +315,9 @@ Ext.define("MainHub.view.flowcell.FlowcellWindowController", {
           margin: 5,
           handler: function () {
             me.unloadLane(grid.getStore(), record);
-          },
-        },
-      ],
+          }
+        }
+      ]
     }).showAt(e.getXY());
   },
 
@@ -354,14 +354,14 @@ Ext.define("MainHub.view.flowcell.FlowcellWindowController", {
 
     if (form.isValid()) {
       Ext.create("MainHub.view.flowcell.SampleSheetIlluminav2Window", {
-        mode: "add",
+        mode: "add"
       });
     } else {
       new Noty({
         text:
           "Please fill in all the required fields " +
           "before adding a sample sheet.",
-        type: "warning",
+        type: "warning"
       }).show();
     }
   },
@@ -376,15 +376,7 @@ Ext.define("MainHub.view.flowcell.FlowcellWindowController", {
     if (!form.isValid()) {
       new Noty({
         text: "Please fill in all the required fields.",
-        type: "warning",
-      }).show();
-      return;
-    }
-
-    if (lanesStore.getCount() !== laneContainers.length) {
-      new Noty({
-        text: "All lanes must be loaded.",
-        type: "warning",
+        type: "warning"
       }).show();
       return;
     }
@@ -393,9 +385,31 @@ Ext.define("MainHub.view.flowcell.FlowcellWindowController", {
     var lanes = lanesStore.data.items.map(function (lane) {
       return {
         name: lane.get("lane_name"),
-        pool_id: lane.get("pool_id"),
+        pool_id: lane.get("pool_id")
       };
     });
+
+    if (lanesStore.getCount() !== laneContainers.length) {
+      Ext.Msg.show({
+        title: "Not all lanes are loaded",
+        message:
+          "Not all lanes are loaded, do you want to save the flowcell anyway?",
+        buttons: Ext.Msg.YESNO,
+        icon: Ext.Msg.QUESTION,
+        fn: function (btn) {
+          if (btn === "yes") {
+            me._proceedSave(wnd, form, data, lanes);
+          }
+        }
+      });
+      return;
+    }
+
+    me._proceedSave(wnd, form, data, lanes);
+  },
+
+  _proceedSave(wnd, form, data, lanes) {
+    var me = this;
 
     if (!form.getFieldValues()["sample_sheet"]) {
       Ext.Msg.show({
@@ -410,7 +424,7 @@ Ext.define("MainHub.view.flowcell.FlowcellWindowController", {
           if (btn === "yes") {
             me._save(wnd, form, data, lanes);
           }
-        },
+        }
       });
     } else {
       me._save(wnd, form, data, lanes);
@@ -421,8 +435,10 @@ Ext.define("MainHub.view.flowcell.FlowcellWindowController", {
     wnd.setLoading("Saving...");
 
     var sample_sheet = null;
-    if (data.sample_sheet &&
-      data.sample_sheet['sample_sheet_type'] === 'illuminav2'){
+    if (
+      data.sample_sheet &&
+      data.sample_sheet["sample_sheet_type"] === "illuminav2"
+    ) {
       sample_sheet = this._distillSampleSheetIlluminav2(data.sample_sheet);
     }
 
@@ -433,9 +449,11 @@ Ext.define("MainHub.view.flowcell.FlowcellWindowController", {
         data: Ext.JSON.encode({
           flowcell_id: data.flowcell_id,
           pool_size: data.sequencing_kit,
+          sequencing_provider: data.sequencing_provider,
+          sequencing_provider_quote_id: data.sequencing_provider_quote,
           sample_sheet: sample_sheet,
-          lanes: lanes,
-        }),
+          lanes: lanes
+        })
       },
 
       success: function (f, action) {
@@ -472,7 +490,7 @@ Ext.define("MainHub.view.flowcell.FlowcellWindowController", {
         wnd.setLoading(false);
         new Noty({ text: error, type: "error" }).show();
         console.error(action);
-      },
+      }
     });
   },
 
@@ -518,5 +536,5 @@ Ext.define("MainHub.view.flowcell.FlowcellWindowController", {
     sampleSheet["sample_sheet_type"] = formValues["sample_sheet_type"];
 
     return sampleSheet;
-  },
+  }
 });

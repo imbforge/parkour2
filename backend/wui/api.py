@@ -4,7 +4,7 @@ from common.views import (
     OrganizationViewSet,
     BioinformaticianViewSet,
     StaffMemberViewSet,
-    DutyViewSet
+    DutyViewSet,
 )
 
 from flowcell.views import (
@@ -12,6 +12,7 @@ from flowcell.views import (
     FlowcellViewSet,
     PoolViewSet,
     SequencerViewSet,
+    SequencingProviderViewSet,
 )
 from incoming_libraries.views import IncomingLibrariesViewSet
 from index_generator.views import (
@@ -52,8 +53,14 @@ router.register(r"duties", DutyViewSet, basename="duties")
 router.register(r"requests", RequestViewSet, basename="request")
 router.register(r"approve", ApproveViewSet, basename="approve")
 router.register(r"cost_units", CostUnitsViewSet, basename="cost-units")
-router.register(r"principal_investigators", PrincipalInvestigatorViewSet, basename="principal_investigators")
-router.register(r"bioinformaticians", BioinformaticianViewSet, basename="bioinformaticians")
+router.register(
+    r"principal_investigators",
+    PrincipalInvestigatorViewSet,
+    basename="principal_investigators",
+)
+router.register(
+    r"bioinformaticians", BioinformaticianViewSet, basename="bioinformaticians"
+)
 router.register(r"staff_members", StaffMemberViewSet, basename="staff_members")
 router.register(r"organizations", OrganizationViewSet, basename="organizations")
 router.register(r"organisms", OrganismViewSet, basename="organism")
@@ -64,7 +71,7 @@ router.register(
     basename="concentration-method",
 )
 router.register(r"index_types", IndexTypeViewSet, basename="index-type")
-router.register(r"index_pairs", IndexPairViewSet, basename='index-pair')
+router.register(r"index_pairs", IndexPairViewSet, basename="index-pair")
 router.register(
     r"generator_index_types", GeneratorIndexTypeViewSet, basename="generator-index-type"
 )
@@ -109,6 +116,9 @@ router.register(r"pooling", PoolingViewSet, basename="pooling")
 router.register(r"sequencers", SequencerViewSet, basename="sequencers")
 router.register(r"flowcells", FlowcellViewSet, basename="flowcells")
 router.register(r"pools", PoolViewSet, basename="pools")
+router.register(
+    r"sequencing_providers", SequencingProviderViewSet, basename="sequencing-providers"
+)
 
 router.register(r"invoicing", InvoicingViewSet, basename="invoicing")
 router.register(r"fixed_costs", FixedCostsViewSet, basename="fixed-costs")

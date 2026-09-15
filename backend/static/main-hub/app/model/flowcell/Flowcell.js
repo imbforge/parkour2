@@ -19,6 +19,14 @@ Ext.define("MainHub.model.flowcell.Flowcell", {
       type: "int"
     },
     {
+      name: "sequencing_provider_name",
+      type: "string"
+    },
+    {
+      name: "sequencing_provider_quote_id",
+      type: "string"
+    },
+    {
       name: "pool",
       type: "int"
     },
@@ -40,7 +48,7 @@ Ext.define("MainHub.model.flowcell.Flowcell", {
     },
     {
       name: "pool_size_name",
-      type: "string",
+      type: "string"
     },
     {
       name: "index_i7_show",
@@ -70,7 +78,7 @@ Ext.define("MainHub.model.flowcell.Flowcell", {
     },
     {
       name: "protocol",
-      type: "string",
-    },
-  ],
+      type: "string"
+    }
+  ]
 });
