@@ -314,7 +314,7 @@ class FlowcellViewSet(MultiEditMixin, viewsets.ReadOnlyModelViewSet):
         """Generate an Illumina v2 sample sheet for selected lanes."""
 
         def generate_illuminav2_sample_sheet(writer, flowcell, sequencer, lane_ids):
-            sample_sheet = flowcell.sample_sheet
+            sample_sheet = flowcell.sample_sheet[0]
 
             # Header
             writer.writerow(["[Header]"] + [""] * 2)

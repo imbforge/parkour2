@@ -440,6 +440,8 @@ Ext.define("MainHub.view.flowcell.FlowcellWindowController", {
       data.sample_sheet["sample_sheet_type"] === "illuminav2"
     ) {
       sample_sheet = this._distillSampleSheetIlluminav2(data.sample_sheet);
+    } else {
+      sample_sheet = [];
     }
 
     form.submit({
