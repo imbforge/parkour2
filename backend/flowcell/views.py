@@ -314,8 +314,12 @@ class FlowcellViewSet(MultiEditMixin, viewsets.ReadOnlyModelViewSet):
         """Generate an Illumina v2 sample sheet for selected lanes."""
 
         def generate_illuminav2_sample_sheet(writer, flowcell, sequencer, lane_ids):
-            sample_sheet = flowcell.sample_sheet[0]
-
+            sample_sheet = (
+                flowcell.sample_sheet[0]
+                if isinstance(flowcell.sample_sheet, list)
+                and len(flowcell.sample_sheet) > 0
+                else {}
+            )
             # Header
             writer.writerow(["[Header]"] + [""] * 2)
             writer.writerow(["FileFormatVersion", "2"] + [""])
@@ -349,7 +353,7 @@ class FlowcellViewSet(MultiEditMixin, viewsets.ReadOnlyModelViewSet):
                 sample_sheet["BCLConvert_Settings"]["SoftwareVersion"] = (
                     flowcell.pool_size.sequencer.bclconvert_version
                 )
-                flowcell.sample_sheet = sample_sheet
+                flowcell.sample_sheet = [sample_sheet]
                 flowcell.save(update_fields=["sample_sheet"])
 
             writer.writerow([""] * 3)
@@ -387,10 +391,17 @@ class FlowcellViewSet(MultiEditMixin, viewsets.ReadOnlyModelViewSet):
             flowcell_id = request.data.get("flowcell_id", "")
             flowcell = Flowcell.objects.get(pk=flowcell_id)
             sequencer = flowcell.pool_size.sequencer
-            if not flowcell.sample_sheet:
+            sample_sheet = (
+                flowcell.sample_sheet[0]
+                if isinstance(flowcell.sample_sheet, list)
+                and len(flowcell.sample_sheet) > 0
+                else []
+            )
+
+            if not sample_sheet:
                 raise Exception("No sample sheet available.")
             try:
-                sample_sheet_type = flowcell.sample_sheet["sample_sheet_type"]
+                sample_sheet_type = sample_sheet["sample_sheet_type"]
             except:
                 raise Exception("Cannot retrieve sample sheet type.")
 
@@ -403,9 +414,7 @@ class FlowcellViewSet(MultiEditMixin, viewsets.ReadOnlyModelViewSet):
                 raise Exception("Unknown sample sheet type")
 
             # Response name
-            run_name = flowcell.sample_sheet.get("Header", {"RunName": "none"}).get(
-                "RunName"
-            )
+            run_name = sample_sheet.get("Header", {"RunName": "none"}).get("RunName")
             f_name = f"{flowcell.flowcell_id}_{run_name}_SampleSheet.csv"
             response["Content-Disposition"] = f'attachment; filename="{f_name}"'
 
@@ -420,19 +429,6 @@ class FlowcellViewSet(MultiEditMixin, viewsets.ReadOnlyModelViewSet):
                 },
                 400,
             )
-
-    @action(methods=["get"], detail=False)
-    def retrieve_samplesheet(self, request):
-        """Download SampleSheet for all lanes of a flowcell."""
-        flowcell_id = request.query_params.get("flowcell_id", "")
-        flowcell = get_object_or_404(Flowcell, flowcell_id=flowcell_id)
-        lane_pks_list = list(flowcell.lanes.all().values_list("pk", flat=True))
-        post_request = type("MockRequest", (), {})()
-        post_request.data = {
-            "ids": json.dumps(lane_pks_list),
-            "flowcell_id": flowcell.pk,
-        }
-        return self.download_sample_sheet(post_request)
 
     @action(methods=["get"], detail=False)
     def retrieve_samplesheet(self, request):

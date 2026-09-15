@@ -119,4 +119,7 @@ class Flowcell(DateTimeMixin):
             )
 
     def __str__(self):
-        return self.flowcell_id
+        return (
+            self.flowcell_id
+            or f"{self.sequencing_provider.name} - {self.sequencing_provider_quote_id}"
+        )
