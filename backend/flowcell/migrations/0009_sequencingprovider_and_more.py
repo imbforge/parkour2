@@ -4,64 +4,6 @@ import django.db.models.deletion
 from django.db import migrations, models
 
 
-def normalize_sample_sheet_to_lane_list(sample_sheet):
-    if sample_sheet is None:
-        return None
-    if isinstance(sample_sheet, list):
-        return sample_sheet
-    if isinstance(sample_sheet, dict):
-        normalized = dict(sample_sheet)
-        normalized.setdefault("lane", 1)
-        return [normalized]
-    return sample_sheet
-
-
-def unwrap_sample_sheet_from_lane_list(sample_sheet):
-    if isinstance(sample_sheet, list) and len(sample_sheet) == 1:
-        lane_payload = sample_sheet[0]
-        if isinstance(lane_payload, dict):
-            unwrapped = dict(lane_payload)
-            unwrapped.pop("lane", None)
-            return unwrapped
-    return sample_sheet
-
-
-def create_internal_provider_and_assign(apps, schema_editor):
-    SequencingProvider = apps.get_model("flowcell", "SequencingProvider")
-    Flowcell = apps.get_model("flowcell", "Flowcell")
-
-    provider, _ = SequencingProvider.objects.get_or_create(name="Internal")
-    Flowcell.objects.filter(sequencing_provider__isnull=True).update(
-        sequencing_provider=provider
-    )
-
-    for flowcell in Flowcell.objects.all():
-        normalized = normalize_sample_sheet_to_lane_list(flowcell.sample_sheet)
-        if normalized != flowcell.sample_sheet:
-            flowcell.sample_sheet = normalized
-            flowcell.save(update_fields=["sample_sheet"])
-
-
-def reverse_internal_provider_assignment(apps, schema_editor):
-    Flowcell = apps.get_model("flowcell", "Flowcell")
-    SequencingProvider = apps.get_model("flowcell", "SequencingProvider")
-
-    provider = SequencingProvider.objects.filter(name="Internal").first()
-    if provider is None:
-        return
-
-    for flowcell in Flowcell.objects.filter(sequencing_provider=provider):
-        unwrapped = unwrap_sample_sheet_from_lane_list(flowcell.sample_sheet)
-        if unwrapped != flowcell.sample_sheet:
-            flowcell.sample_sheet = unwrapped
-            flowcell.save(update_fields=["sample_sheet"])
-
-    Flowcell.objects.filter(sequencing_provider=provider).update(
-        sequencing_provider=None
-    )
-    provider.delete()
-
-
 class Migration(migrations.Migration):
     dependencies = [
         ("flowcell", "0008_remove_flowcell_index1_cycles_and_more"),
@@ -119,9 +61,5 @@ class Migration(migrations.Migration):
                 to="flowcell.sequencingprovider",
                 verbose_name="Sequencing Provider",
             ),
-        ),
-        migrations.RunPython(
-            create_internal_provider_and_assign,
-            reverse_internal_provider_assignment,
         ),
     ]
