@@ -535,6 +535,11 @@ Ext.define("MainHub.view.flowcell.FlowcellWindowController", {
     // Add back sample sheet type
     sampleSheet["sample_sheet_type"] = formValues["sample_sheet_type"];
 
-    return sampleSheet;
+    // Add default lane information if not present
+    if (!sampleSheet["lane"]) {
+      sampleSheet["lane"] = 1;
+    }
+
+    return [sampleSheet];
   }
 });
