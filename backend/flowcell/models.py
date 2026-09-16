@@ -109,6 +109,8 @@ class Flowcell(DateTimeMixin):
                 )
             return
 
+        self.flowcell_id = self.flowcell_id.strip() if self.flowcell_id else ""
+
         if not self.sequencing_provider_quote_id.strip():
             raise ValidationError(
                 {
@@ -117,6 +119,8 @@ class Flowcell(DateTimeMixin):
                     ]
                 }
             )
+
+        self.sequencing_provider_quote_id = self.sequencing_provider_quote_id.strip()
 
     def __str__(self):
         return (

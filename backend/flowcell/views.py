@@ -2,6 +2,7 @@ import csv
 import itertools
 import json
 import logging
+import re
 
 from dateutil.relativedelta import relativedelta
 from django.apps import apps
@@ -415,7 +416,11 @@ class FlowcellViewSet(MultiEditMixin, viewsets.ReadOnlyModelViewSet):
 
             # Response name
             run_name = sample_sheet.get("Header", {"RunName": "none"}).get("RunName")
-            f_name = f"{flowcell.flowcell_id}_{run_name}_SampleSheet.csv"
+            # Clean the sequencing_provider_quote_id to remove spaces and special characters for the filename
+            sequencing_provider_quote_id_clean = re.sub(
+                r"\s+", "", flowcell.sequencing_provider_quote_id
+            )
+            f_name = f"{flowcell.flowcell_id or sequencing_provider_quote_id_clean}_{run_name}_SampleSheet.csv"
             response["Content-Disposition"] = f'attachment; filename="{f_name}"'
 
             return response
