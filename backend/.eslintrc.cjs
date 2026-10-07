@@ -1,0 +1,15 @@
+module.exports = {
+  root: true,
+  env: {
+    browser: true
+  },
+  parserOptions: {
+    ecmaVersion: 5,
+    sourceType: "script"
+  },
+  rules: {
+    "comma-dangle": ["error", "never"],
+    "no-trailing-spaces": "error",
+    "no-restricted-syntax": ["error", "ObjectPattern", "PropertyDefinition", "MethodDefinition"]
+  }
+};

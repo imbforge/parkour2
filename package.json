@@ -1,0 +1,8 @@
+{
+    "scripts": {
+        "lint:js": "eslint --config backend/.eslintrc.cjs \"backend/static/main-hub/**/*.js\""
+    },
+    "devDependencies": {
+        "eslint": "8.57.0"
+    }
+}
