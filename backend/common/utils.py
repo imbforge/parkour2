@@ -5,6 +5,7 @@ from time import time
 
 from django.db import connection
 from django.utils import timezone
+import copy
 
 
 def timeit(func):
@@ -99,3 +100,17 @@ def retrieve_group_items(request, queryset):
         assert isinstance(this_lab_group, User)
         queryset = queryset.filter(user=this_lab_group)
     return queryset
+
+
+def merge_dicts(base, override):
+    """Recursively merge two dictionaries, with values from the override dictionary
+    taking precedence over those in the base dictionary."""
+    result = copy.deepcopy(base)
+
+    for key, value in override.items():
+        if isinstance(value, dict) and isinstance(result.get(key), dict):
+            result[key] = merge_dicts(result[key], value)
+        else:
+            result[key] = copy.deepcopy(value)
+
+    return result

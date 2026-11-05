@@ -61,9 +61,7 @@ class PoolAdmin(admin.ModelAdmin):
         "name",
         "size__short_name",
     )
-    autocomplete_fields = (
-        "user",
-    )
+    autocomplete_fields = ("user",)
     list_filter = ("size", ArchivedFilter)
     inlines = [LibraryInline, SampleInline]
     exclude = (
@@ -71,11 +69,7 @@ class PoolAdmin(admin.ModelAdmin):
         "samples",
     )
 
-    actions = (
-        "mark_as_archived",
-        "mark_as_non_archived",
-        "reload_pool"
-    )
+    actions = ("mark_as_archived", "mark_as_non_archived", "reload_pool")
 
     @admin.action(description="Mark as archived")
     def mark_as_archived(self, request, queryset):
@@ -87,11 +81,11 @@ class PoolAdmin(admin.ModelAdmin):
 
     @admin.action(description="Re-load pool")
     def reload_pool(self, request, queryset):
-
-        queryset.update(loaded=0)
+        queryset.update(loaded=0, is_loaded=False)
         for pool in queryset:
             pool.libraries.update(status=4)
             pool.samples.update(status=4)
+
 
 # Do not show in 'main' admin anymore, now used as inline for
 # lane capacity/size of Sequencer

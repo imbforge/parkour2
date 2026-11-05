@@ -6,7 +6,7 @@ Ext.define("MainHub.view.flowcell.FlowcellWindow", {
   controller: "flowcell-window",
 
   title: "Load Flowcell",
-  height: 595,
+  height: 620,
   width: 800,
 
   modal: true,
@@ -23,7 +23,7 @@ Ext.define("MainHub.view.flowcell.FlowcellWindow", {
       items: [
         {
           layout: "hbox",
-          height: 420,
+          height: 445,
           border: 0,
           items: [
             {
@@ -54,82 +54,109 @@ Ext.define("MainHub.view.flowcell.FlowcellWindow", {
                       emptyText: "Sequencing Kit",
                       store: "PoolSizes",
                       forceSelection: true,
-                      labelWidth: 68,
+                      labelWidth: 85,
                       allowBlank: false
                     },
                     {
-                      xtype: "textfield",
-                      name: "flowcell_id",
-                      itemId: "flowcell_id",
-                      fieldLabel: "Flowcell ID",
-                      emptyText: "Flowcell ID",
-                      labelWidth: 68,
-                      regex: /^[A-Za-z0-9]+$/,
-                      regexText: "Only A-Z a-z and 0-9 are allowed",
-                      allowBlank: true,
-                      padding: 0
+                      xtype: "combobox",
+                      itemId: "sequencing-provider-cb",
+                      name: "sequencing_provider",
+                      fieldLabel: "Seq. Provider",
+                      emptyText: "Sequencing Provider",
+                      queryMode: "local",
+                      valueField: "id",
+                      displayField: "name",
+                      padding: "0 10px 0 0",
+                      labelWidth: 85,
+                      forceSelection: true,
+                      allowBlank: false,
+                      store: "sequencingProvidersStore",
+
+                      listeners: {
+                        change: function (cb, newValue, oldValue) {
+                          // Toggle the flowcell_id and sequencing_provider_quote fields based on the selected provider
+                          var selectedRecord = cb.getSelection();
+                          var selectedName = selectedRecord
+                            ? selectedRecord.get("name")
+                            : cb.getRawValue();
+
+                          var flowcellForm = cb.up("#flowcell-form").getForm();
+                          var flowcellIdField = cb
+                            .up("#flowcell-form")
+                            .down("#flowcell_id");
+                          var quoteButton = cb
+                            .up("#flowcell-form")
+                            .down("#sequencing-quote-button");
+
+                          var quoteContainer = cb
+                            .up("#flowcell-form")
+                            .down("#quote-container");
+
+                          // Clean up string comparison safely
+                          var isInternal =
+                            (selectedName || "").toLowerCase() === "internal";
+
+                          if (isInternal) {
+                            // if the provider is internal, enable the flowcell_id field and disable the quote button
+
+                            quoteButton.addCls("x-item-invisible");
+                            quoteButton.hide();
+                            quoteButton.setDisabled(true);
+                            flowcellForm.findField("quote").setValue(null);
+
+                            quoteContainer.setFieldLabel("");
+                            flowcellIdField.setDisabled(false);
+                            flowcellIdField.allowBlank = false;
+                            flowcellIdField.setEmptyText("Flowcell ID");
+                            flowcellIdField.show();
+                            flowcellIdField.removeCls("x-item-invisible");
+                          } else {
+                            // if the provider is not internal, disable the flowcell_id field and enable the quote button
+                            flowcellIdField.addCls("x-item-invisible");
+                            flowcellIdField.hide();
+                            flowcellIdField.setDisabled(true);
+                            flowcellIdField.allowBlank = true;
+                            flowcellIdField.setEmptyText("");
+                            flowcellForm.findField("flowcell_id").setValue("");
+
+                            quoteContainer.setFieldLabel(" ");
+                            quoteButton.setDisabled(false);
+                            quoteButton.allowBlank = false;
+                            quoteButton.show();
+                            quoteButton.removeCls("x-item-invisible");
+                          }
+                        }
+                      }
                     },
                     {
                       xtype: "fieldcontainer",
+                      itemId: "quote-container",
                       layout: "hbox",
-                      fieldLabel: "Provider",
-                      labelWidth: 68,
+                      fieldLabel: " ",
+                      labelSeparator: "",
+                      height: 42,
                       items: [
                         {
-                          xtype: "combobox",
-                          itemId: "sequencing-provider-cb",
-                          name: "sequencing_provider",
-                          queryMode: "local",
-                          valueField: "id",
-                          displayField: "name",
-                          fieldLabel: "",
-                          emptyText: "Name",
-                          padding: "0 10px 0 0",
-                          width: 160,
-                          forceSelection: true,
-                          allowBlank: false,
-                          store: "sequencingProvidersStore",
-                          listeners: {
-                            change: function (cb, newValue, oldValue) {
-                              // Toggle the flowcell_id and sequencing_provider_quote fields
-                              // based on the selected provider
-                              var selectedRecord = cb.getSelection();
-                              var selectedName = selectedRecord
-                                ? selectedRecord.get("name")
-                                : cb.getRawValue();
-
-                              var flowcellIdField = cb
-                                .up("#flowcell-form")
-                                .down("#flowcell_id");
-                              var sequenceProviderQuoteField = cb
-                                .up("#flowcell-form")
-                                .down("#sequencing-provider-quote");
-
-                              if (
-                                (selectedName || "").toLowerCase() ===
-                                "internal"
-                              ) {
-                                flowcellIdField.setDisabled(false);
-                                flowcellIdField.allowBlank = false;
-                                sequenceProviderQuoteField.setDisabled(true);
-                                sequenceProviderQuoteField.allowBlank = true;
-                              } else {
-                                flowcellIdField.setDisabled(true);
-                                flowcellIdField.allowBlank = true;
-                                sequenceProviderQuoteField.setDisabled(false);
-                                sequenceProviderQuoteField.allowBlank = false;
-                              }
-                            }
-                          }
+                          xtype: "textfield",
+                          name: "flowcell_id",
+                          itemId: "flowcell_id",
+                          fieldLabel: "Flowcell ID",
+                          emptyText: "Flowcell ID",
+                          regex: /^[A-Za-z0-9]+$/,
+                          regexText: "Only A-Z a-z and 0-9 are allowed",
+                          allowBlank: true,
+                          labelWidth: 85,
+                          width: 365,
+                          cls: "x-item-invisible"
                         },
                         {
-                          xtype: "textfield",
-                          itemId: "sequencing-provider-quote",
-                          name: "sequencing_provider_quote",
-                          emptyText: "Quote",
-                          width: 122,
-                          allowBlank: true,
-                          disabled: true
+                          xtype: "button",
+                          itemId: "sequencing-quote-button",
+                          text: "Add Quote",
+                          margin: "0 0 10px 0",
+                          cls: "x-btn-default-small",
+                          width: 100,
+                          cls: "x-item-invisible"
                         }
                       ]
                     },
@@ -159,6 +186,10 @@ Ext.define("MainHub.view.flowcell.FlowcellWindow", {
                     {
                       name: "sample_sheet",
                       hidden: true
+                    },
+                    {
+                      name: "quote",
+                      hidden: true
                     }
                   ]
                 },
@@ -168,7 +199,7 @@ Ext.define("MainHub.view.flowcell.FlowcellWindow", {
                   itemId: "flowcell-result-grid",
                   padding: "0 15",
                   width: 396,
-                  height: 160,
+                  height: 170,
                   viewConfig: {
                     markDirty: false,
                     stripeRows: false
@@ -200,7 +231,7 @@ Ext.define("MainHub.view.flowcell.FlowcellWindow", {
               cls: "pools-flowcell",
               padding: "0 3 0 0",
               width: 400,
-              height: 410,
+              height: 430,
               border: 0,
               viewConfig: {
                 stripeRows: false,

@@ -21,19 +21,19 @@ Ext.define("MainHub.view.flowcell.SampleSheetIlluminav2Window", {
       autoScroll: true,
       defaults: {
         width: 520,
-        labelWidth: 140,
+        labelWidth: 140
       },
       items: [
         {
           xtype: "label",
-          html: "Only the fields marked in <b>bold</b> are required.",
+          html: "Only the fields marked in <b>bold</b> are required."
         },
         {
           xtype: "fieldset",
           title: "Header",
           defaults: {
             width: 490,
-            labelWidth: 140,
+            labelWidth: 140
           },
           items: [
             {
@@ -42,16 +42,61 @@ Ext.define("MainHub.view.flowcell.SampleSheetIlluminav2Window", {
               fieldLabel: "<b>Run Name</b>",
               regex: /^[A-Za-z0-9_]+$/,
               regexText: "Only A-Z a-z 0-9 and _ are allowed",
-              allowBlank: false,
+              allowBlank: false
             },
-          ],
+            {
+              xtype: "combobox",
+              name: "SS-Header-InstrumentPlatform",
+              fieldLabel: "<b>Instrument Platform</b>",
+              store: Ext.create("Ext.data.Store", {
+                fields: ["name"],
+                data: [
+                  {
+                    name: "NovaSeqXSeries"
+                  },
+                  {
+                    name: "NextSeq1k2k"
+                  }
+                ]
+              }),
+              queryMode: "local",
+              displayField: "name",
+              valueField: "name",
+              value: "",
+              forceSelection: true,
+              allowBlank: false
+            },
+            {
+              xtype: "combobox",
+              name: "SS-Header-InstrumentType",
+              fieldLabel: "<b>Instrument Type</b>",
+
+              store: Ext.create("Ext.data.Store", {
+                fields: ["name"],
+                data: [
+                  {
+                    name: "NovaSeqX"
+                  },
+                  {
+                    name: "NextSeq2000"
+                  }
+                ]
+              }),
+              queryMode: "local",
+              displayField: "name",
+              valueField: "name",
+              value: "",
+              forceSelection: true,
+              allowBlank: false
+            }
+          ]
         },
         {
           xtype: "fieldset",
           title: "Reads",
           defaults: {
             width: 490,
-            labelWidth: 140,
+            labelWidth: 140
           },
           items: [
             {
@@ -67,40 +112,35 @@ Ext.define("MainHub.view.flowcell.SampleSheetIlluminav2Window", {
                 value: null,
                 minValue: 0,
                 hideTrigger: true,
-                padding: "0 0 0 5",
+                padding: "0 0 0 5"
               },
               items: [
                 {
                   name: "SS-Reads-Read1Cycles",
-                  fieldLabel:
-                    '<span data-qtip="Read 1" style="font-weight:bold;">R1</span>',
-                  value: 30,
-                  minValue: 1,
-                  allowBlank: false,
-                  padding: 0,
+                  fieldLabel: '<span data-qtip="Read 1";">R1</span>'
                 },
                 {
                   name: "SS-Reads-Read2Cycles",
-                  fieldLabel: '<span data-qtip="Read 2">R2</span>',
+                  fieldLabel: '<span data-qtip="Read 2">R2</span>'
                 },
                 {
                   name: "SS-Reads-Index1Cycles",
-                  fieldLabel: '<span data-qtip="Index 1">I1</span>',
+                  fieldLabel: '<span data-qtip="Index 1">I1</span>'
                 },
                 {
                   name: "SS-Reads-Index2Cycles",
-                  fieldLabel: '<span data-qtip="Index 2">I2</span>',
-                },
-              ],
-            },
-          ],
+                  fieldLabel: '<span data-qtip="Index 2">I2</span>'
+                }
+              ]
+            }
+          ]
         },
         {
           xtype: "fieldset",
           title: "Sequencing Settings",
           defaults: {
             width: 490,
-            labelWidth: 140,
+            labelWidth: 140
           },
           items: [
             {
@@ -113,26 +153,26 @@ Ext.define("MainHub.view.flowcell.SampleSheetIlluminav2Window", {
                 labelWidth: 20,
                 flex: 1,
                 value: false,
-                inputValue: "true",
+                inputValue: "true"
               },
               items: [
                 {
                   name: "SS-Sequencing_Settings-CustomRead1Primer",
-                  fieldLabel: '<span data-qtip="Read 1">R1</span>',
+                  fieldLabel: '<span data-qtip="Read 1">R1</span>'
                 },
                 {
                   name: "SS-Sequencing_Settings-CustomRead2Primer",
-                  fieldLabel: '<span data-qtip="Read 2">R2</span>',
+                  fieldLabel: '<span data-qtip="Read 2">R2</span>'
                 },
                 {
                   name: "SS-Sequencing_Settings-CustomIndex1Primer",
-                  fieldLabel: '<span data-qtip="Index 1">I1</span>',
+                  fieldLabel: '<span data-qtip="Index 1">I1</span>'
                 },
                 {
                   name: "SS-Sequencing_Settings-CustomIndex2Primer",
-                  fieldLabel: '<span data-qtip="Index 2">I2</span>',
-                },
-              ],
+                  fieldLabel: '<span data-qtip="Index 2">I2</span>'
+                }
+              ]
             },
             {
               xtype: "combobox",
@@ -143,21 +183,21 @@ Ext.define("MainHub.view.flowcell.SampleSheetIlluminav2Window", {
                 fields: ["name"],
                 data: [
                   {
-                    name: "ILMNStrandedTotalRNA",
+                    name: "ILMNStrandedTotalRNA"
                   },
                   {
-                    name: "ILMNStrandedmRNA",
-                  },
-                ],
+                    name: "ILMNStrandedmRNA"
+                  }
+                ]
               }),
               queryMode: "local",
               displayField: "name",
               valueField: "name",
               value: "",
               forceSelection: false,
-              allowBlank: true,
-            },
-          ],
+              allowBlank: true
+            }
+          ]
         },
         {
           xtype: "fieldset",
@@ -165,7 +205,7 @@ Ext.define("MainHub.view.flowcell.SampleSheetIlluminav2Window", {
           margin: 0,
           defaults: {
             width: 490,
-            labelWidth: 140,
+            labelWidth: 140
           },
           items: [
             {
@@ -180,19 +220,19 @@ Ext.define("MainHub.view.flowcell.SampleSheetIlluminav2Window", {
                 value: 1,
                 labelWidth: 20,
                 flex: 1,
-                hideTrigger: true,
+                hideTrigger: true
               },
               items: [
                 {
                   name: "SS-BCLConvert_Settings-BarcodeMismatchesIndex1",
-                  fieldLabel: '<span data-qtip="Index 1">I1</span>',
+                  fieldLabel: '<span data-qtip="Index 1">I1</span>'
                 },
                 {
                   name: "SS-BCLConvert_Settings-BarcodeMismatchesIndex2",
                   fieldLabel: '<span data-qtip="Index 2">I2</span>',
-                  padding: "0 0 0 5",
-                },
-              ],
+                  padding: "0 0 0 5"
+                }
+              ]
             },
             {
               xtype: "textfield",
@@ -200,21 +240,21 @@ Ext.define("MainHub.view.flowcell.SampleSheetIlluminav2Window", {
               fieldLabel: "FASTQ Compression",
               padding: "10 0 0 0",
               value: "gzip",
-              readOnly: true,
+              readOnly: true
             },
             {
               xtype: "textfield",
               name: "SS-BCLConvert_Settings-AdapterRead1",
               fieldLabel: "Adapter Read 1",
               regex: /^[ACGT]+$/,
-              regexText: "Only A, T, C ang G are allowed",
+              regexText: "Only A, T, C ang G are allowed"
             },
             {
               xtype: "textfield",
               name: "SS-BCLConvert_Settings-AdapterRead2",
               fieldLabel: "Adapter Read 2",
               regex: /^[ACGT]+$/,
-              regexText: "Only A, T, C ang G are allowed",
+              regexText: "Only A, T, C ang G are allowed"
             },
             {
               xtype: "fieldcontainer",
@@ -234,19 +274,19 @@ Ext.define("MainHub.view.flowcell.SampleSheetIlluminav2Window", {
                     value: null,
                     hideTrigger: true,
                     regex: /^[YUIN0-9]+$/,
-                    regexText: "Only Y, U, I, N and 0-9 are allowed",
+                    regexText: "Only Y, U, I, N and 0-9 are allowed"
                   },
                   items: [
                     {
                       name: "OC-BCLConvert_Settings-OverrideCycles-1",
-                      fieldLabel: '<span data-qtip="Read 1">R1</span>',
+                      fieldLabel: '<span data-qtip="Read 1">R1</span>'
                     },
                     {
                       name: "OC-BCLConvert_Settings-OverrideCycles-2",
                       fieldLabel: '<span data-qtip="Read 2">R2</span>',
-                      padding: "0 0 0 5",
-                    },
-                  ],
+                      padding: "0 0 0 5"
+                    }
+                  ]
                 },
                 {
                   xtype: "fieldcontainer",
@@ -260,26 +300,26 @@ Ext.define("MainHub.view.flowcell.SampleSheetIlluminav2Window", {
                     value: null,
                     hideTrigger: true,
                     regex: /^[YUIN0-9]+$/,
-                    regexText: "Only Y, U, I, N and 0-9 are allowed",
+                    regexText: "Only Y, U, I, N and 0-9 are allowed"
                   },
                   items: [
                     {
                       name: "OC-BCLConvert_Settings-OverrideCycles-3",
-                      fieldLabel: '<span data-qtip="Index 1">I1</span>',
+                      fieldLabel: '<span data-qtip="Index 1">I1</span>'
                     },
                     {
                       name: "OC-BCLConvert_Settings-OverrideCycles-4",
                       fieldLabel: '<span data-qtip="Index 2">I2</span>',
-                      padding: "0 0 0 5px",
-                    },
-                  ],
-                },
-              ],
-            },
-          ],
-        },
-      ],
-    },
+                      padding: "0 0 0 5px"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
   ],
 
   dockedItems: [
@@ -292,15 +332,15 @@ Ext.define("MainHub.view.flowcell.SampleSheetIlluminav2Window", {
           xtype: "button",
           itemId: "ss-cancel-button",
           iconCls: "fa fa-ban fa-lg",
-          text: "Cancel",
+          text: "Cancel"
         },
         {
           xtype: "button",
           itemId: "ss-save-button",
           text: "Save",
-          iconCls: "fa fa-floppy-o fa-lg",
-        },
-      ],
-    },
-  ],
+          iconCls: "fa fa-floppy-o fa-lg"
+        }
+      ]
+    }
+  ]
 });

@@ -1,6 +1,7 @@
 Ext.define("MainHub.view.flowcell.FlowcellWindowController", {
   extend: "Ext.app.ViewController",
   alias: "controller.flowcell-window",
+  requires: ["MainHub.view.flowcell.SequencingQuoteWindow"],
 
   config: {
     control: {
@@ -21,6 +22,9 @@ Ext.define("MainHub.view.flowcell.FlowcellWindowController", {
       "#sample-sheet-illuminav2-button": {
         click: "createSampleSheetIlluminav2Window"
       },
+      "#sequencing-quote-button": {
+        click: "createSequencingQuoteWindow"
+      },
       "#save-button": {
         click: "save"
       }
@@ -30,6 +34,12 @@ Ext.define("MainHub.view.flowcell.FlowcellWindowController", {
   onWindowReady: function () {
     Ext.getStore("lanesStore").removeAll();
     Ext.getStore("poolsStore").reload();
+
+    // Add "Internal" to the Sequencing Provider store at the top
+    var sequencingProviderStore = Ext.getStore("sequencingProvidersStore");
+    if (!sequencingProviderStore.findRecord("name", "Internal")) {
+      sequencingProviderStore.insert(0, { name: "Internal" });
+    }
   },
 
   onWindowClose: function (wnd) {
@@ -366,6 +376,23 @@ Ext.define("MainHub.view.flowcell.FlowcellWindowController", {
     }
   },
 
+  createSequencingQuoteWindow: function (btn) {
+    var form = btn.up("#flowcell-form");
+
+    if (form.isValid()) {
+      Ext.create("MainHub.view.flowcell.SequencingQuoteWindow", {
+        mode: "add"
+      });
+    } else {
+      new Noty({
+        text:
+          "Please fill in all the required fields " +
+          "before adding a sequencing quote.",
+        type: "warning"
+      }).show();
+    }
+  },
+
   save: function (btn) {
     var me = this;
     var wnd = btn.up("window");
@@ -381,6 +408,7 @@ Ext.define("MainHub.view.flowcell.FlowcellWindowController", {
       return;
     }
 
+    // Check if all lanes are loaded
     var data = form.getFieldValues();
     var lanes = lanesStore.data.items.map(function (lane) {
       return {
@@ -398,6 +426,9 @@ Ext.define("MainHub.view.flowcell.FlowcellWindowController", {
         icon: Ext.Msg.QUESTION,
         fn: function (btn) {
           if (btn === "yes") {
+            if (!me._validateProviderQuote(form)) {
+              return;
+            }
             me._proceedSave(wnd, form, data, lanes);
           }
         }
@@ -405,10 +436,41 @@ Ext.define("MainHub.view.flowcell.FlowcellWindowController", {
       return;
     }
 
+    if (!me._validateProviderQuote(form)) {
+      return;
+    }
+
     me._proceedSave(wnd, form, data, lanes);
   },
 
-  _proceedSave(wnd, form, data, lanes) {
+  _validateProviderQuote: function (form) {
+    // Check if a sequencing quote is provided for non-internal providers.
+    var providerField = form.findField("sequencing_provider");
+    var providerName = providerField.getSelection()
+      ? providerField.getSelection().get("name")
+      : providerField.getRawValue();
+
+    if ((providerName || "").toLowerCase() !== "internal") {
+      var quote = form.findField("quote").getValue();
+      if (!quote || !String(quote).trim()) {
+        Ext.Msg.show({
+          title: "Missing quote",
+          message:
+            "A quote is required before saving a flowcell<br>sequenced by an external provider.",
+          buttons: Ext.Msg.OK,
+          icon: Ext.Msg.WARNING
+        });
+        return false;
+      }
+    } else {
+      // If the provider is internal, clear the quote field
+      form.findField("quote").setValue(null);
+    }
+
+    return true;
+  },
+
+  _proceedSave: function (wnd, form, data, lanes) {
     var me = this;
 
     if (!form.getFieldValues()["sample_sheet"]) {
@@ -434,6 +496,7 @@ Ext.define("MainHub.view.flowcell.FlowcellWindowController", {
   _save: function (wnd, form, data, lanes) {
     wnd.setLoading("Saving...");
 
+    // Distill sample sheet data
     var sample_sheet = null;
     if (
       data.sample_sheet &&
@@ -441,7 +504,14 @@ Ext.define("MainHub.view.flowcell.FlowcellWindowController", {
     ) {
       sample_sheet = this._distillSampleSheetIlluminav2(data.sample_sheet);
     } else {
-      sample_sheet = [];
+      sample_sheet = {};
+    }
+
+    // Distill quote data
+    var quote = data.quote;
+    var providerField = form.findField("sequencing_provider");
+    if (quote) {
+      quote = this._distillQuote(quote, providerField.getValue());
     }
 
     form.submit({
@@ -451,9 +521,8 @@ Ext.define("MainHub.view.flowcell.FlowcellWindowController", {
         data: Ext.JSON.encode({
           flowcell_id: data.flowcell_id,
           pool_size: data.sequencing_kit,
-          sequencing_provider: data.sequencing_provider,
-          sequencing_provider_quote_id: data.sequencing_provider_quote,
           sample_sheet: sample_sheet,
+          quotes: quote ? [quote] : [],
           lanes: lanes
         })
       },
@@ -496,37 +565,53 @@ Ext.define("MainHub.view.flowcell.FlowcellWindowController", {
     });
   },
 
-  _distillSampleSheetIlluminav2: function (formValues) {
+  _distillQuote: function (quote, providerId) {
+    // Convert quote properties to remove the "SQ-" prefix, replace "-" with "_"
+    //  and convert to lowercase
+    var newQuote = {};
+    for (var key in quote) {
+      if (quote.hasOwnProperty(key)) {
+        var newKey = key.replace("SQ-", "").replace(/-/g, "_").toLowerCase();
+        newQuote[newKey] = quote[key];
+      }
+    }
+    newQuote["sequencing_provider"] = providerId;
+    return newQuote;
+  },
+
+  _distillSampleSheetIlluminav2: function (sampleSheetProps) {
     // Generate the value for the OverrideCycles parameter
     // from the four separate values for each read
-    var OverrideCyclesVal = Object.keys(formValues)
+    var OverrideCyclesVal = Object.keys(sampleSheetProps)
       .filter(function (fieldName) {
         return fieldName.indexOf("OC") == 0;
       })
       .map(function (fieldName) {
-        return formValues[fieldName];
+        return sampleSheetProps[fieldName];
       })
       .join(";");
 
-    // If OverrideCyclesVal was set, add it to formValues
+    // If OverrideCyclesVal was set, add it to sampleSheetProps
     if (OverrideCyclesVal !== ";;;") {
-      formValues["SS-BCLConvert_Settings-OverrideCycles"] = OverrideCyclesVal;
+      sampleSheetProps["SS-BCLConvert_Settings-OverrideCycles"] =
+        OverrideCyclesVal;
     }
 
     // Convert form values into a structured object using their field names
-    sampleSheet = Object.keys(formValues)
+    var sampleSheet = Object.keys(sampleSheetProps)
       .filter(function (fieldName) {
         return fieldName.indexOf("SS") == 0;
       })
       .reduce(function (newSampleSheet, fieldName) {
-        var val = formValues[fieldName];
+        var val = sampleSheetProps[fieldName];
         if (val) {
           var [sectionTitle, parameterName] = fieldName.slice(3).split("-");
           if (sectionTitle in newSampleSheet) {
-            newSampleSheet[sectionTitle][parameterName] = formValues[fieldName];
+            newSampleSheet[sectionTitle][parameterName] =
+              sampleSheetProps[fieldName];
           } else {
             var newParameter = {};
-            newParameter[parameterName] = formValues[fieldName];
+            newParameter[parameterName] = sampleSheetProps[fieldName];
             newSampleSheet[sectionTitle] = newParameter;
           }
         }
@@ -535,13 +620,8 @@ Ext.define("MainHub.view.flowcell.FlowcellWindowController", {
       }, {});
 
     // Add back sample sheet type
-    sampleSheet["sample_sheet_type"] = formValues["sample_sheet_type"];
+    sampleSheet["sample_sheet_type"] = sampleSheetProps["sample_sheet_type"];
 
-    // Add default lane information if not present
-    if (!sampleSheet["lane"]) {
-      sampleSheet["lane"] = 1;
-    }
-
-    return [sampleSheet];
+    return sampleSheet;
   }
 });

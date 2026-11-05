@@ -23,8 +23,8 @@ Ext.define("MainHub.model.flowcell.Flowcell", {
       type: "string"
     },
     {
-      name: "sequencing_provider_quote_id",
-      type: "string"
+      name: "quote_ids",
+      type: "auto"
     },
     {
       name: "pool",

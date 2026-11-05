@@ -206,7 +206,9 @@ Ext.define("MainHub.view.flowcell.Flowcells", {
                   Ext.String.format(
                     "{0} - {1}",
                     children[0].get("sequencing_provider_name"),
-                    children[0].get("sequencing_provider_quote_id")
+                    children[0].get("quote_ids")
+                      ? children[0].get("quote_ids").join(", ")
+                      : "NA"
                   )
                 );
               },

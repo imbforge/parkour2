@@ -1,12 +1,18 @@
-from django.http import HttpRequest
-from django.http.response import HttpResponse
-from common.admin import ArchivedFilter
-from django.conf import settings
+from django import forms
+from django.contrib import admin
 from django.templatetags.static import static
 from django.urls import reverse
 from django.utils.safestring import mark_safe
-from django.contrib import admin
-from flowcell.models import Flowcell, Sequencer, Lane, SequencingProvider
+
+from common.admin import ArchivedFilter
+from flowcell.models import (
+    Flowcell,
+    Lane,
+    SampleSheetSchema,
+    Sequencer,
+    SequencingProvider,
+    SequencingQuote,
+)
 from index_generator.models import PoolSize
 
 
@@ -102,7 +108,7 @@ class PoolSizeInline(admin.TabularInline):
 
 @admin.register(Sequencer)
 class SequencerAdmin(admin.ModelAdmin):
-    list_display = ("name", "archived")
+    list_display = ("name", "sample_sheet_schema", "archived")
 
     list_filter = (ArchivedFilter,)
 
@@ -121,11 +127,36 @@ class SequencerAdmin(admin.ModelAdmin):
         queryset.update(archived=False)
 
 
+class FlowcellAdminForm(forms.ModelForm):
+    class Meta:
+        model = Flowcell
+        fields = "__all__"
+
+    def clean(self):
+        cleaned_data = super().clean()
+        flowcell_id = cleaned_data.get("flowcell_id")
+        quotes = cleaned_data.get("sequencing_quotes")
+
+        if not flowcell_id and not quotes:
+            self.add_error(
+                "flowcell_id",
+                "Either a Flowcell ID or a sequencing quote must be provided.",
+            )
+            self.add_error(
+                "sequencing_quotes",
+                "Either a Flowcell ID or a sequencing quote must be provided.",
+            )
+
+        return cleaned_data
+
+
 @admin.register(Flowcell)
 class FlowcellAdmin(admin.ModelAdmin):
-    list_display = ("flowcell_id", "quote_id", "pool_size", "archived")
-    list_display_links = ("flowcell_id", "quote_id")
+    form = FlowcellAdminForm
+    list_display = ("flowcell_id_or_quote_id", "pool_size", "quotes", "archived")
+    list_display_links = ("flowcell_id_or_quote_id",)
     list_filter = ("pool_size", ArchivedFilter)
+    autocomplete_fields = ("sequencing_quotes",)
     exclude = (
         "lanes",
         "requests",
@@ -137,13 +168,33 @@ class FlowcellAdmin(admin.ModelAdmin):
         "mark_as_non_archived",
     )
 
-    @admin.display(description="Quote ID")
-    def quote_id(self, obj):
-        if obj.sequencing_provider.name.strip().lower() != "internal":
-            return (
-                f"{obj.sequencing_provider.name} - {obj.sequencing_provider_quote_id}"
-            )
-        return ""
+    def format_quotes(self, obj):
+        quotes = obj.sequencing_quotes.select_related("sequencing_provider").only(
+            "quote_id", "sequencing_provider__name"
+        )
+
+        if not quotes.exists():
+            return "-"
+
+        # There should ever be only one sequencing provider per flowcell
+        sequencing_provider = quotes.values_list(
+            "sequencing_provider__name", flat=True
+        ).first()
+
+        quote_ids = list(quotes.values_list("quote_id", flat=True))
+
+        return f"{sequencing_provider} - {', '.join(quote_ids)}"
+
+    @admin.display(description="Flowcell / Quote ID")
+    def flowcell_id_or_quote_id(self, obj):
+        if obj.flowcell_id:
+            return obj.flowcell_id
+
+        return self.format_quotes(obj)
+
+    @admin.display(description="Quotes")
+    def quotes(self, obj):
+        return self.format_quotes(obj)
 
     @admin.action(description="Mark as archived")
     def mark_as_archived(self, request, queryset):
@@ -185,6 +236,63 @@ class LaneAdmin(admin.ModelAdmin):
 class SequencingProviderAdmin(admin.ModelAdmin):
     list_display = ("name", "archived")
     list_filter = (ArchivedFilter,)
+
+    actions = (
+        "mark_as_archived",
+        "mark_as_non_archived",
+    )
+
+    @admin.action(description="Mark as archived")
+    def mark_as_archived(self, request, queryset):
+        queryset.update(archived=True)
+
+    @admin.action(description="Mark as non-archived")
+    def mark_as_non_archived(self, request, queryset):
+        queryset.update(archived=False)
+
+
+class FlowcellQuoteInline(admin.TabularInline):
+    model = Flowcell.sequencing_quotes.through
+    extra = 1
+    fk_name = "sequencingquote"
+    fields = ("flowcell",)
+    verbose_name = "Flowcell"
+    verbose_name_plural = "Flowcells"
+    readonly_fields = ("flowcell",)
+
+
+@admin.register(SequencingQuote)
+class SequencingQuoteAdmin(admin.ModelAdmin):
+    list_filter = ("quote_id",)
+    list_display = (
+        "quote_id",
+        "sequencing_provider",
+        "date_created",
+        "price_amount",
+        "flowcell_ids",
+    )
+    search_fields = ("quote_id", "sequencing_provider__name")
+    ordering = ("-date_created",)
+    inlines = [FlowcellQuoteInline]
+
+    @admin.display(description="Price")
+    def price_amount(self, obj):
+        return f"{obj.price} €" if obj.price else "-"
+
+    @admin.display(description="Flowcells")
+    def flowcell_ids(self, obj):
+        flowcells = obj.flowcells.all().only("flowcell_id")
+        if flowcells.exists():
+            return ", ".join({f.flowcell_id or obj.quote_id for f in flowcells})
+        return "-"
+
+
+@admin.register(SampleSheetSchema)
+class SampleSheetSchemaAdmin(admin.ModelAdmin):
+    list_display = ("name", "archived")
+    list_filter = (ArchivedFilter,)
+    search_fields = ("name",)
+    ordering = ("name",)
 
     actions = (
         "mark_as_archived",

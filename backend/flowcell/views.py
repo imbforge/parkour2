@@ -6,7 +6,7 @@ import re
 
 from dateutil.relativedelta import relativedelta
 from django.apps import apps
-from django.db.models import F, Prefetch, Q
+from django.db.models import Prefetch, Q
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -220,7 +220,7 @@ class FlowcellViewSet(MultiEditMixin, viewsets.ReadOnlyModelViewSet):
                 Prefetch("libraries", queryset=libraries_qs),
                 Prefetch("samples", queryset=samples_qs),
             )
-            .filter(archived=False, size__lanes__gt=F("loaded"))
+            .filter(archived=False, is_loaded=False)
             .order_by("pk")
         )
 
@@ -314,28 +314,37 @@ class FlowcellViewSet(MultiEditMixin, viewsets.ReadOnlyModelViewSet):
     def download_sample_sheet(self, request):
         """Generate an Illumina v2 sample sheet for selected lanes."""
 
-        def generate_illuminav2_sample_sheet(writer, flowcell, sequencer, lane_ids):
-            sample_sheet = (
-                flowcell.sample_sheet[0]
-                if isinstance(flowcell.sample_sheet, list)
-                and len(flowcell.sample_sheet) > 0
-                else {}
-            )
+        def generate_illuminav2_sample_sheet(writer, sample_sheet, records):
+            """Generate an Illumina v2 sample sheet for a given lane."""
+
             # Header
             writer.writerow(["[Header]"] + [""] * 2)
             writer.writerow(["FileFormatVersion", "2"] + [""])
-            writer.writerow(["RunName", sample_sheet["Header"]["RunName"]] + [""])
             writer.writerow(
-                ["InstrumentPlatform", sequencer.instrument_platform] + [""]
+                ["RunName", sample_sheet.get("Header", {}).get("RunName", "")] + [""]
             )
-            writer.writerow(["InstrumentType", sequencer.instrument_type] + [""])
+            writer.writerow(
+                [
+                    "InstrumentPlatform",
+                    sample_sheet.get("Header", {}).get("InstrumentPlatform", ""),
+                ]
+                + [""]
+            )
+            writer.writerow(
+                [
+                    "InstrumentType",
+                    sample_sheet.get("Header", {}).get("InstrumentType", ""),
+                ]
+                + [""]
+            )
             writer.writerow([""] * 3)
 
-            # Reads
-            writer.writerow(["[Reads]"] + [""] * 2)
-            for k, v in sample_sheet["Reads"].items():
-                writer.writerow([k, v] + [""])
-            writer.writerow([""] * 3)
+            if "Reads" in sample_sheet:
+                # Reads
+                writer.writerow(["[Reads]"] + [""] * 2)
+                for k, v in sample_sheet["Reads"].items():
+                    writer.writerow([k, v] + [""])
+                writer.writerow([""] * 3)
 
             # Sequencing settings
             if "Sequencing_Settings" in sample_sheet:
@@ -346,16 +355,25 @@ class FlowcellViewSet(MultiEditMixin, viewsets.ReadOnlyModelViewSet):
 
             # BCLconvert settings
             writer.writerow(["[BCLConvert_Settings]"] + [""] * 2)
-            writer.writerow(["SoftwareVersion", sequencer.bclconvert_version] + [""])
-            if "BCLConvert_Settings" in sample_sheet:
-                for k, v in sample_sheet["BCLConvert_Settings"].items():
-                    writer.writerow([k, v] + [""])
 
-                sample_sheet["BCLConvert_Settings"]["SoftwareVersion"] = (
-                    flowcell.pool_size.sequencer.bclconvert_version
-                )
-                flowcell.sample_sheet = [sample_sheet]
-                flowcell.save(update_fields=["sample_sheet"])
+            bclconvert_settings = sample_sheet.get(
+                "BCLConvert_Settings",
+                {},
+            )
+
+            # Write BCLconvert settings in a specific order, followed by any additional settings
+            key_order = [
+                "SoftwareVersion",
+                "FastqCompressionFormat",
+                "BarcodeMismatchesIndex1",
+                "BarcodeMismatchesIndex2",
+            ]
+            for k in key_order:
+                if k in bclconvert_settings:
+                    writer.writerow([k, bclconvert_settings.get(k, "")] + [""])
+            for k, v in bclconvert_settings.items():
+                if k not in key_order:
+                    writer.writerow([k, v] + [""])
 
             writer.writerow([""] * 3)
 
@@ -363,77 +381,74 @@ class FlowcellViewSet(MultiEditMixin, viewsets.ReadOnlyModelViewSet):
             writer.writerow(["[BCLConvert_Data]"] + [""] * 2)
             writer.writerow(["Sample_ID", "Index", "Index2"])
 
-            lanes = Lane.objects.filter(pk__in=lane_ids).order_by("name")
+            rows = [
+                [record.name, record.index_i7, record.index_i5] for record in records
+            ]
 
-            rows = []
-            for lane in lanes:
-                records = list(
-                    itertools.chain(
-                        lane.pool.libraries.all()
-                        .filter(~Q(status=-1))
-                        .only("name", "index_i7", "index_i5"),
-                        lane.pool.samples.all()
-                        .filter(~Q(status=-1))
-                        .only("name", "index_i7", "index_i5"),
-                    )
-                )
-
-                for record in records:
-                    rows.append([record.name, record.index_i7, record.index_i5])
-
-            rows = sorted(rows, key=lambda x: x[0])
-            for row in rows:
+            for row in sorted(rows, key=lambda item: item[0]):
                 writer.writerow(row)
 
             writer.writerow([""] * 3)
 
-        try:
-            lane_ids = json.loads(request.data.get("ids", "[]"))
-            flowcell_id = request.data.get("flowcell_id", "")
-            flowcell = Flowcell.objects.get(pk=flowcell_id)
-            sequencer = flowcell.pool_size.sequencer
-            sample_sheet = (
-                flowcell.sample_sheet[0]
-                if isinstance(flowcell.sample_sheet, list)
-                and len(flowcell.sample_sheet) > 0
-                else []
+        # try:
+        flowcell_id = request.data.get("flowcell_id", "")
+        flowcell = Flowcell.objects.get(pk=flowcell_id)
+        sample_sheet = flowcell.sample_sheet or {}
+        lane_ids = json.loads(request.data.get("ids", "[]"))
+
+        sample_sheet_type = sample_sheet.get("sample_sheet_type", "illuminav2")
+        if sample_sheet_type != "illuminav2":
+            raise Exception("Unknown sample sheet type")
+
+        if not lane_ids:
+            raise Exception("No lanes selected.")
+
+        # Get all samples and libraries for the selected lanes
+        lanes = flowcell.lanes.filter(pk__in=lane_ids)
+        records = list(
+            itertools.chain.from_iterable(
+                itertools.chain(
+                    lane.pool.libraries.all()
+                    .filter(~Q(status=-1))
+                    .only("name", "index_i7", "index_i5"),
+                    lane.pool.samples.all()
+                    .filter(~Q(status=-1))
+                    .only("name", "index_i7", "index_i5"),
+                )
+                for lane in lanes
             )
+        )
 
-            if not sample_sheet:
-                raise Exception("No sample sheet available.")
-            try:
-                sample_sheet_type = sample_sheet["sample_sheet_type"]
-            except:
-                raise Exception("Cannot retrieve sample sheet type.")
+        response = HttpResponse(content_type="text/csv")
+        writer = csv.writer(response)
 
-            response = HttpResponse(content_type="text/csv")
-            writer = csv.writer(response)
+        if sample_sheet_type == "illuminav2":
+            run_name = sample_sheet.get("Header", {}).get("RunName", "norunname")
+            generate_illuminav2_sample_sheet(writer, sample_sheet, records)
+        else:
+            raise Exception("Unknown sample sheet type")
 
-            if sample_sheet_type == "illuminav2":
-                generate_illuminav2_sample_sheet(writer, flowcell, sequencer, lane_ids)
-            else:
-                raise Exception("Unknown sample sheet type")
-
-            # Response name
-            run_name = sample_sheet.get("Header", {"RunName": "none"}).get("RunName")
-            # Clean the sequencing_provider_quote_id to remove spaces and special characters for the filename
-            sequencing_provider_quote_id_clean = re.sub(
-                r"\s+", "", flowcell.sequencing_provider_quote_id
+        # Clean the quote_ids to remove spaces and special characters for the filename
+        quote_ids_clean = "_".join(
+            re.sub(r"\s+", "", quote_id)
+            for quote_id in flowcell.sequencing_quotes.all().values_list(
+                "quote_id", flat=True
             )
-            f_name = f"{flowcell.flowcell_id or sequencing_provider_quote_id_clean}_{run_name}_SampleSheet.csv"
-            response["Content-Disposition"] = f'attachment; filename="{f_name}"'
+        )
+        f_name = f"{flowcell.flowcell_id or quote_ids_clean}_{run_name}_SampleSheet.csv"
+        response["Content-Disposition"] = f'attachment; filename="{f_name}"'
 
-            return response
+        return response
 
-        except Exception as e:
-            return Response(
-                {
-                    "success": False,
-                    "message": "There was an error creating the sample sheet. "
-                    f"Error: {e}",
-                },
-                400,
-            )
+        # except Exception as e:
+        #     return Response(
+        #         {
+        #             "success": False,
+        #             "message": "There was an error creating the sample sheet. "
+        #             f"Error: {e}",
+        #         },
+        #         400,
+        #     )
 
     @action(methods=["get"], detail=False)
     def retrieve_samplesheet(self, request):

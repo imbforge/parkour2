@@ -1,23 +1,29 @@
+import copy
 import itertools
 
 from django.apps import apps
+from django.db import transaction
 from django.db.models import Q
+from django.utils.dateparse import parse_datetime
 from rest_framework.exceptions import ValidationError
 from rest_framework.serializers import (
     CharField,
     IntegerField,
+    JSONField,
+    ListField,
     ListSerializer,
     ModelSerializer,
     SerializerMethodField,
 )
 
-from .models import Flowcell, Lane, Sequencer
+from common.utils import merge_dicts
+
+from .models import Flowcell, Lane, Sequencer, SequencingProvider, SequencingQuote
 
 Request = apps.get_model("request", "Request")
 Library = apps.get_model("library", "Library")
 Sample = apps.get_model("sample", "Sample")
 Pool = apps.get_model("index_generator", "Pool")
-SequencingProvider = apps.get_model("flowcell", "SequencingProvider")
 
 
 class SequencerSerializer(ModelSerializer):
@@ -183,6 +189,7 @@ class FlowcellListSerializer(ModelSerializer):
     sequencer_name = SerializerMethodField()
     pool_size_name = SerializerMethodField()
     sequencing_provider_name = SerializerMethodField()
+    quote_ids = SerializerMethodField()
     lanes = LaneSerializer(many=True)
 
     class Meta:
@@ -190,14 +197,14 @@ class FlowcellListSerializer(ModelSerializer):
         fields = (
             "flowcell",
             "flowcell_id",
-            "sequencing_provider",
             "sequencing_provider_name",
-            "sequencing_provider_quote_id",
+            "quote_ids",
             "sequencer",
             "sequencer_name",
             "pool_size_name",
             "create_time",
             "lanes",
+            "sample_sheet",
         )
 
     def get_flowcell(self, obj):
@@ -214,9 +221,19 @@ class FlowcellListSerializer(ModelSerializer):
         return str(obj.pool_size)
 
     def get_sequencing_provider_name(self, obj):
-        if obj.sequencing_provider:
-            return str(obj.sequencing_provider.name)
-        return None
+        names = list(
+            dict.fromkeys(
+                obj.sequencing_quotes.exclude(
+                    sequencing_provider__isnull=True
+                ).values_list("sequencing_provider__name", flat=True)
+            )
+        )
+        if not names:
+            return None
+        return "; ".join(filter(None, names))
+
+    def get_quote_ids(self, obj):
+        return list(obj.sequencing_quotes.values_list("quote_id", flat=True))
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
@@ -234,9 +251,7 @@ class FlowcellListSerializer(ModelSerializer):
                     "sequencer_name": data["sequencer_name"],
                     "create_time": data["create_time"],
                     "sequencing_provider_name": data["sequencing_provider_name"],
-                    "sequencing_provider_quote_id": data[
-                        "sequencing_provider_quote_id"
-                    ],
+                    "quote_ids": data["quote_ids"],
                     **x,
                 },
                 data.pop("lanes"),
@@ -245,23 +260,96 @@ class FlowcellListSerializer(ModelSerializer):
 
 
 class FlowcellSerializer(ModelSerializer):
+    quotes = ListField(
+        child=JSONField(), required=False, allow_empty=True, write_only=True
+    )
+
     class Meta:
         model = Flowcell
         fields = (
             "flowcell_id",
             "pool_size",
             "sample_sheet",
-            "sequencing_provider",
-            "sequencing_provider_quote_id",
+            "quotes",
         )
 
     def validate(self, attrs):
-        model_attrs = {key: value for key, value in attrs.items() if key != "lanes"}
+        # Validate the quotes payload and normalize the date_created field
+        # The frontend sends a single quote payload while the model stores the
+        # relationship on `sequencing_quotes` as a ManyToMany. The M2M objects do
+        # not exist before the Flowcell is saved, so we must skip the model-level
+        # `clean()` requirement when a quote payload is present.
+        quotes = attrs.get("quotes", [])
+        if not isinstance(quotes, list):
+            quotes = [quotes] if quotes else []
+
+        # Gather all provider IDs to fetch in a single database query
+        provider_ids = [
+            q.get("sequencing_provider")
+            for q in quotes
+            if isinstance(q, dict) and q.get("sequencing_provider")
+        ]
+
+        # Check if all provided provider IDs exist in the database
+        existing_provider_ids = set(
+            SequencingProvider.objects.filter(pk__in=provider_ids).values_list(
+                "pk", flat=True
+            )
+        )
+
+        validated_quotes = []
+        for index, quote in enumerate(quotes):
+            if not quote or not isinstance(quote, dict):
+                continue
+
+            provider_id = quote.get("sequencing_provider")
+            if not provider_id:
+                raise ValidationError(
+                    {
+                        "quotes": f"Quote at index {index}: Sequencing provider must be provided."
+                    }
+                )
+
+            if provider_id not in existing_provider_ids:
+                raise ValidationError(
+                    {
+                        "quotes": f"Quote at index {index}: Sequencing provider with ID {provider_id} does not exist."
+                    }
+                )
+
+            # Parse date in validate so create() receives clean date objects
+            created_date = quote.get("date_created", "")
+            if isinstance(created_date, str) and created_date.strip():
+                parsed_dt = parse_datetime(created_date.strip())
+                quote["date_created"] = parsed_dt.date() if parsed_dt else None
+
+            validated_quotes.append(quote)
+
+        # Write normalized quotes back to attrs
+        attrs["quotes"] = validated_quotes
+
+        model_attrs = {
+            key: value for key, value in attrs.items() if key not in {"lanes", "quotes"}
+        }
+        # If quotes are provided, we skip the model-level clean() validation that requires either
+        # flowcell_id or sequencing_quotes
+        if attrs.get("quotes") and not model_attrs.get("flowcell_id"):
+            return attrs
+
         flowcell = Flowcell(**model_attrs)
         flowcell.clean()
+
         return attrs
 
     def to_internal_value(self, data):
+        data = data.copy()
+
+        # Normalize the incoming quotes to a list of quote objects
+        quotes = data.get("quotes")
+
+        if quotes is not None and not isinstance(quotes, list):
+            data["quotes"] = [quotes]
+
         internal_value = super().to_internal_value(data)
 
         lanes = data.get("lanes", [])
@@ -272,51 +360,44 @@ class FlowcellSerializer(ModelSerializer):
                 }
             )
 
-        # Not needed anymore since we are not enforcing all lanes to be loaded at once
-        # # Check if all lanes are loaded
-        # pool_size = internal_value.get("pool_size")
-        # if len(lanes) != pool_size.lanes:
-        #     raise ValidationError(
-        #         {
-        #             "lanes": ["All lanes must be loaded."],
-        #         }
-        #     )
-
         internal_value.update({"lanes": lanes})
 
         return internal_value
 
+    @transaction.atomic
     def create(self, validated_data):
         lanes = validated_data.pop("lanes")
+        quotes = validated_data.pop("quotes", [])
+        sample_sheet = validated_data.get("sample_sheet", {})
+
+        # Create flowcell
         instance = super().create(validated_data)
 
-        # Create Lane objects and add them to the flowcell
-        lane_ids = []
-        for lane_dict in lanes:
-            lane = Lane(name=lane_dict["name"], pool_id=lane_dict["pool_id"])
-            lane.save()
-            lane_ids.append(lane.pk)
-        instance.lanes.add(*lane_ids)
+        # Create Lane objects and add them to the flowcell.
+        # Use .create() rather than bulk_create() so Lane.save() runs and updates
+        # the parent pool's loaded counter; bulk_create bypasses that signal.
+        created_lanes = [
+            Lane.objects.create(name=lane["name"], pool_id=lane["pool_id"])
+            for lane in lanes
+        ]
+        instance.lanes.add(*created_lanes)
 
-        pool_ids = list(
-            Lane.objects.all()
-            .filter(pk__in=lane_ids)
-            .values_list(
-                "pool",
-                flat=True,
-            )
-            .distinct()
-        )
+        # Update the loaded counter for each pool and mark all libraries/samples
+        # in the pool as loaded (status=5)
+        pool_ids = {lane.pool_id for lane in created_lanes}
         pools = Pool.objects.filter(archived=False, pk__in=pool_ids)
-
-        # After creating a flowcell, update all pool's libraries' and
-        # samples' statuses if the pool is fully loaded
         for pool in pools:
-            if pool.loaded == pool.size.lanes:
-                pool.libraries.all().filter(status=4).update(status=5)
-                pool.samples.all().filter(status=4).update(status=5)
+            Pool.objects.filter(pk=pool.pk).update(
+                # Set loaded to the number of lanes in the pool,
+                # and mark the pool as loaded
+                is_loaded=True,
+                loaded=pool.lane_set.count(),
+            )
+            pool.libraries.all().filter(status=4).update(status=5)
+            pool.samples.all().filter(status=4).update(status=5)
 
-        # When a Flowcell is loaded, save the all corresponding requests
+        # When a Flowcell is loaded, update all requests that have libraries or
+        # samples in the flowcell's pools to be marked as sequenced
         libraries = Library.objects.filter(pool__in=pools)
         samples = Sample.objects.filter(pool__in=pools)
         requests = Request.objects.filter(
@@ -330,6 +411,32 @@ class FlowcellSerializer(ModelSerializer):
         )
         requests.update(sequenced=True)
         instance.requests.add(*requests)
+
+        # Create SequencingQuote objects and add them to the flowcell
+        quote_objs = []
+        for quote in quotes:
+            provider_id = quote.pop("sequencing_provider")
+
+            quote_obj = SequencingQuote(
+                sequencing_provider_id=provider_id
+                if not isinstance(provider_id, SequencingProvider)
+                else provider_id.pk,
+                **quote,
+            )
+            quote_obj.clean()
+            quote_obj.save()
+            quote_objs.append(quote_obj)
+
+        if quote_objs:
+            instance.sequencing_quotes.add(*quote_objs)
+
+        # Create sample sheet based on the sequencer's schema if it exists
+        sequencer = getattr(instance.pool_size, "sequencer", None)
+        if sequencer and sequencer.sample_sheet_schema:
+            schema_default = copy.deepcopy(sequencer.sample_sheet_schema.schema)
+            sample_sheet = merge_dicts(schema_default, sample_sheet)
+        instance.sample_sheet = sample_sheet
+        instance.save(update_fields=["sample_sheet"])
 
         return instance
 

@@ -1,32 +1,39 @@
 import itertools
 
-from common.models import DateTimeMixin
 from django.conf import settings
+from django.contrib.auth import get_user_model
 from django.db import models
+
+from common.models import DateTimeMixin
 from library.models import Library
 from sample.models import Sample
-from django.contrib.auth import get_user_model
 
-from math import log, floor
-from decimal import Decimal
 
 class PoolSize(models.Model):
-    sequencer = models.ForeignKey('flowcell.Sequencer',
-                                  verbose_name='Sequencer',
-                                  null=True,
-                                  on_delete=models.SET_NULL)
+    sequencer = models.ForeignKey(
+        "flowcell.Sequencer",
+        verbose_name="Sequencer",
+        null=True,
+        on_delete=models.SET_NULL,
+    )
     short_name = models.CharField("Name", max_length=30, blank=False)
     size = models.PositiveSmallIntegerField("Size (in million reads)")
     lanes = models.PositiveSmallIntegerField("Number of Lanes")
     cycles = models.PositiveSmallIntegerField("Number of cycles")
-    read_lengths = models.ManyToManyField('library_sample_shared.ReadLength', verbose_name='read lengths', related_name='pool_size',)
+    read_lengths = models.ManyToManyField(
+        "library_sample_shared.ReadLength",
+        verbose_name="read lengths",
+        related_name="pool_size",
+    )
     archived = models.BooleanField("Archived", default=False)
 
     class Meta:
         ordering = ["sequencer", "size", "cycles"]
         constraints = [
-            models.UniqueConstraint(fields=['sequencer', 'size', 'cycles', 'lanes', 'archived'],
-                                    name='unique_pool_size')
+            models.UniqueConstraint(
+                fields=["sequencer", "size", "cycles", "lanes", "archived"],
+                name="unique_pool_size",
+            )
         ]
 
     def __str__(self):
@@ -35,7 +42,7 @@ class PoolSize(models.Model):
         # k = Decimal(1000)
         # magnitude = int(floor(log(size, k)))
         # return f"{self.sequencer} - {self.lanes}×{size / k**Decimal(magnitude)}{prefixes[magnitude]}, {self.cycles}c"
-        return  f"{self.sequencer} - {self.short_name}"
+        return f"{self.sequencer} - {self.short_name}"
 
     @property
     def name(self):
@@ -47,9 +54,9 @@ class PoolSize(models.Model):
 
 
 def get_sentinel_user():
-    return get_user_model().objects.get_or_create(email="deleted.user@example.com",
-                                                  first_name='Deleted',
-                                                  last_name='User')[0]
+    return get_user_model().objects.get_or_create(
+        email="deleted.user@example.com", first_name="Deleted", last_name="User"
+    )[0]
 
 
 class Pool(DateTimeMixin):
@@ -62,7 +69,18 @@ class Pool(DateTimeMixin):
     size = models.ForeignKey(
         PoolSize, verbose_name="Size", on_delete=models.SET_NULL, null=True
     )
-    loaded = models.PositiveSmallIntegerField("Loaded", default=0, blank=True)
+    loaded = models.PositiveSmallIntegerField(
+        "Loaded",
+        help_text="The number of lanes that have been loaded for this pool.",
+        default=0,
+        blank=True,
+    )
+    is_loaded = models.BooleanField(
+        "Loaded on Flowcell",
+        help_text="The pool has been loaded on a flowcell and does not need to be shown in the flowcell creation form.",
+        default=False,
+        blank=True,
+    )
     libraries = models.ManyToManyField(Library, related_name="pool", blank=True)
     samples = models.ManyToManyField(Sample, related_name="pool", blank=True)
     comment = models.TextField(verbose_name="Comment", blank=True)

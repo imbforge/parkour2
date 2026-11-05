@@ -106,6 +106,7 @@ class TestLaneModel(BaseTestCase):
 
 class TestFlowcellModel(BaseTestCase):
     def setUp(self):
+        self.user = self.create_user()
         pool_size = create_pool_size()
         self.flowcell = create_flowcell(get_random_name(), pool_size)
 
@@ -130,49 +131,36 @@ class TestFlowcellModel(BaseTestCase):
     def test_flowcell_sequences(self):
         self.assertIsNone(self.flowcell.sequences)
 
-    def test_external_provider_requires_quote_id(self):
-        provider = SequencingProvider.objects.create(name="Novogene")
-        flowcell = Flowcell(
-            flowcell_id="FC-123",
-            pool_size=create_pool_size(),
-            sequencing_provider=provider,
-            sequencing_provider_quote_id="   ",
-        )
-
-        with self.assertRaises(ValidationError) as ctx:
-            flowcell.full_clean()
-
-        self.assertIn("sequencing_provider_quote_id", ctx.exception.message_dict)
-
-    def test_internal_provider_requires_flowcell_id(self):
-        provider = SequencingProvider.objects.create(name="Internal")
-        flowcell = Flowcell(
-            flowcell_id="",
-            pool_size=create_pool_size(),
-            sequencing_provider=provider,
-            sequencing_provider_quote_id="QUOTE-1",
-        )
+    def test_flowcell_requires_id_or_quote(self):
+        flowcell = Flowcell(flowcell_id="", pool_size=create_pool_size())
 
         with self.assertRaises(ValidationError) as ctx:
             flowcell.full_clean()
 
         self.assertIn("flowcell_id", ctx.exception.message_dict)
 
-    def test_serializer_matches_model_validation_for_internal_provider(self):
-        provider = SequencingProvider.objects.create(name="Internal")
+    def test_serializer_accepts_quote_based_flowcell_without_flowcell_id(self):
+        provider = SequencingProvider.objects.create(name="Novogene")
+        pool = create_pool(self.user)
 
         serializer = FlowcellSerializer(
             data={
                 "flowcell_id": "",
                 "pool_size": create_pool_size().pk,
-                "sequencing_provider": provider.pk,
-                "sequencing_provider_quote_id": "QUOTE-1",
-                "lanes": [{"name": "L1", "pool_id": create_pool(self.user).pk}],
+                "quotes": [
+                    {
+                        "sequencing_provider": provider.pk,
+                        "quote_id": "QUOTE-1",
+                        "date_created": "2024-01-01",
+                        "data_delivery_method": "email",
+                        "price": "12.34",
+                    }
+                ],
+                "lanes": [{"name": "L1", "pool_id": pool.pk}],
             }
         )
 
-        self.assertFalse(serializer.is_valid())
-        self.assertIn("flowcell_id", serializer.errors)
+        self.assertTrue(serializer.is_valid(), serializer.errors)
 
 
 # Views
@@ -348,9 +336,9 @@ class TestFlowcell(BaseTestCase):
         updated_sample1 = sample1.__class__.objects.get(pk=sample1.pk)
         updated_sample2 = sample2.__class__.objects.get(pk=sample2.pk)
         self.assertEqual(updated_library1.status, 5)
-        self.assertEqual(updated_library2.status, 4)
+        self.assertEqual(updated_library2.status, 5)
         self.assertEqual(updated_sample1.status, 5)
-        self.assertEqual(updated_sample2.status, 4)
+        self.assertEqual(updated_sample2.status, 5)
 
     def test_create_flowcell_no_lanes(self):
         """Ensure error is thrown if no lanes are provided."""
