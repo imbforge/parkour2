@@ -43,7 +43,7 @@ def port_legacy_quote_data(apps, schema_editor):
                 if getattr(flowcell, "create_time", None)
                 else timezone.now().date(),
                 "data_delivery_method": "",
-                "cost": None,
+                "price": None,
                 "notes": "",
             },
         )
