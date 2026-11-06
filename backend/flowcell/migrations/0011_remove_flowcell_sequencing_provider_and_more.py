@@ -133,6 +133,9 @@ class Migration(migrations.Migration):
         migrations.RunPython(
             remove_internal_provider_and_update_sample_sheets, migrations.RunPython.noop
         ),
+        # Flush pending deferred FK trigger events, otherwise PostgreSQL refuses
+        # the ALTER TABLE statements below within the same transaction.
+        migrations.RunSQL("SET CONSTRAINTS ALL IMMEDIATE", migrations.RunSQL.noop),
         migrations.RemoveField(
             model_name="flowcell",
             name="sequencing_provider",
