@@ -42,13 +42,9 @@ def port_legacy_quote_data(apps, schema_editor):
                 "date_created": getattr(flowcell, "create_time", None).date()
                 if getattr(flowcell, "create_time", None)
                 else timezone.now().date(),
-                "library_type": "",
-                "library_name": quote_id,
-                "insert_size": 0,
-                "total_million_reads": 0,
                 "data_delivery_method": "",
-                "description": "",
                 "cost": None,
+                "notes": "",
             },
         )
         flowcell.sequencing_quotes.add(quote)
