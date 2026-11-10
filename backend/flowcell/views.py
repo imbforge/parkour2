@@ -453,8 +453,29 @@ class FlowcellViewSet(MultiEditMixin, viewsets.ReadOnlyModelViewSet):
     @action(methods=["get"], detail=False)
     def retrieve_samplesheet(self, request):
         """Download SampleSheet for all lanes of a flowcell."""
-        flowcell_id = request.query_params.get("flowcell_id", "")
-        flowcell = get_object_or_404(Flowcell, flowcell_id=flowcell_id)
+        flowcell_id = request.query_params.get("flowcell_id", None)
+        quote_id = request.query_params.get("quote_id", None)
+        flowcell = Flowcell.objects.filter(
+            Q(flowcell_id__iexact=flowcell_id)
+            | Q(sequencing_quotes__quote_id__iexact=quote_id)
+        ).distinct()
+        if not flowcell.exists():
+            return Response(
+                {
+                    "success": False,
+                    "message": "Flowcell not found.",
+                },
+                404,
+            )
+        if flowcell.count() > 1:
+            return Response(
+                {
+                    "success": False,
+                    "message": f"Multiple flowcells found for the given flowcell_id or quote_id. {flowcell.values_list('flowcell_id', flat=True)}\\n{flowcell_id}, {quote_id}",
+                },
+                400,
+            )
+        flowcell = flowcell.first()
         lane_pks_list = list(flowcell.lanes.all().values_list("pk", flat=True))
         post_request = type("MockRequest", (), {})()
         post_request.data = {
