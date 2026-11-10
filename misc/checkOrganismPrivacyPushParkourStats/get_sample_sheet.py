@@ -1,10 +1,12 @@
 import argparse
 import os
 import smtplib
+import sys
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-import requests
 from urllib.parse import urljoin
+
+import requests
 
 # Configs
 CONFIG = {
@@ -71,7 +73,7 @@ def send_mail(message: str, config: dict[str, str]) -> None:
     s.quit()
 
 
-def main(flowcell_id: str, quote_id: str, config: dict[str:str]) -> None:
+def main(flowcell_id: str, quote_id: str, config: dict[str, str]) -> None:
     # Construct the payload
     flowcell_id = flowcell_id.strip() if flowcell_id else None
     quote_id = quote_id.strip() if quote_id else None
@@ -91,16 +93,8 @@ def main(flowcell_id: str, quote_id: str, config: dict[str:str]) -> None:
             f"Failed to retrieve sample sheet from Parkour. Status code: {sample_sheet.status_code}, Response: {sample_sheet.text}"
         )
 
-    # Get file name from Content-Disposition header
-    content_disposition = sample_sheet.headers.get("Content-Disposition")
-    if content_disposition:
-        filename = content_disposition.split("filename=")[-1].strip('"')
-    if not filename:
-        filename = f"{flowcell_id or quote_id}_SampleSheet.csv"
-
-    # Write the sample sheet to a file
-    with open(filename, "wb") as f:
-        f.write(sample_sheet.content)
+    sys.stdout.write(sample_sheet.text)
+    sys.stdout.flush()
 
 
 if __name__ == "__main__":
@@ -116,5 +110,6 @@ if __name__ == "__main__":
         raise exp
 
     print(
-        f"Successfully retrieved sample sheet for flowcell {cmd_args.flowcell_id} or quote {cmd_args.quote_id}."
+        f"Successfully retrieved sample sheet for flowcell {cmd_args.flowcell_id} or quote {cmd_args.quote_id}.",
+        file=sys.stderr,
     )
